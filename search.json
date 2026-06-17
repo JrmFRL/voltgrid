@@ -2,7 +2,7 @@
   {
     "objectID": "index.html",
     "href": "index.html",
-    "title": "Voltgrid Engine Initial Assessment",
+    "title": "Voltgrid Engine Assessment",
     "section": "",
     "text": "Introduction",
     "crumbs": [
@@ -10,11 +10,11 @@
     ]
   },
   {
-    "objectID": "index.html#what-voltgrid-does",
-    "href": "index.html#what-voltgrid-does",
-    "title": "Voltgrid Engine Initial Assessment",
-    "section": "What Voltgrid Does",
-    "text": "What Voltgrid Does\nThe final goal of Voltgrid is to simulate a distributed energy grid at steady state: given a supply profile (available primary energy) and a current grid composition (generator capacities), find the power-dispatch state the network converges to at equilibrium.\nAt equilibrium, two quantities fully describe the grid:\n\nDispatch rates \\(\\mu_i\\) per generator — which nodes are active and at what rate they deliver power, consistent with their installed capacities.\nPower flows \\(v^i_x\\) per line per generator — what each node draws and exports, including transfer flows exchanged between nodes and power exported to the external load.\n\nTogether these define a complete operating portrait of the grid: not only which nodes are present (capacity) but what they are doing (dispatch) — which flows are produced, consumed, and ultimately available to the load.\n\n\n\n\n\n\nNoteWhy steady state?\n\n\n\nThe optimization does not model dynamics over time. It finds the flow distribution that satisfies all balance constraints simultaneously — the state the network would reach if given sufficient time to settle on the provided supply profile.",
+    "objectID": "index.html#what-voltgrid-does-for-science",
+    "href": "index.html#what-voltgrid-does-for-science",
+    "title": "Voltgrid Engine Assessment",
+    "section": "What Voltgrid Does for Science",
+    "text": "What Voltgrid Does for Science\nThe goal of Voltgrid is to simulate a distributed energy grid at steady state: given a supply profile (available primary energy) and a current grid composition (generator capacities), find the power-dispatch state the network converges to at equilibrium.\nAt equilibrium, two quantities fully describe the grid:\n\nDispatch rates \\(\\mu_i\\) per generator — which nodes are active and at what rate they deliver power, consistent with their installed capacities.\nPower flows \\(v^i_x\\) per line per generator — what each node draws and exports, including transfer flows exchanged between nodes and power exported to the external load.\n\nTogether these define a complete operating portrait of the grid: not only which nodes are present (capacity) but what they are doing (dispatch) — which flows are produced, consumed, and ultimately available to the load.\n\n\n\n\n\n\nNoteWhy steady state?\n\n\n\nThe optimization does not model dynamics over time. It finds the flow distribution that satisfies all balance constraints simultaneously — the state the network would reach if given sufficient time to settle on the provided supply profile.",
     "crumbs": [
       "Introduction"
     ]
@@ -22,7 +22,7 @@
   {
     "objectID": "index.html#document-map",
     "href": "index.html#document-map",
-    "title": "Voltgrid Engine Initial Assessment",
+    "title": "Voltgrid Engine Assessment",
     "section": "Document Map",
     "text": "Document Map\n\nTechnical documentation of the engine\n\n1.a Processing — pipeline steps before the optimization starts\n1.b Understanding the optimization engine\n1.c Supply profiles and add-ons\n1.d Minimal supply\n1.e Supply optimization\n\nAssessing the validity of current methodology\n\n2.a Validation using measurement datasets\n2.b Sensitivity analysis\n2.c Robustness plan for calls to optimization solver\n\nSecuring IP while improving current engine\n\n3.a Using training to correct errors",
     "crumbs": [
