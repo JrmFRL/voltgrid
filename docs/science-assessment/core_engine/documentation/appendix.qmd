@@ -1,0 +1,307 @@
+# Appendix — Code Reference
+
+---
+
+## A.1 Optimization Engine
+
+Each section maps an optimization concept to the exact lines of GridFlow source code that implement it.
+
+**Base constraints** (`S·v = 0`, `objective_[nd] >= 0`, transfer bounds, `network_objective` equality) are all added in Step 1 inside `network.py : Network.__init__()`.
+**Optimization-specific constraints** (individual min dispatch floor, network dispatch bounds) are added in Step 2 inside `problems.py : cooperative_tradeoff()` and `util.py : _apply_min_dispatch()`.
+
+---
+
+### Step 1 — Problem Construction
+
+#### Lines → flow variables + $S \cdot v = 0$
+
+```python
+# network.py : 262-265, 277
+for r in model.lines:
+    r.id = r.global_id + suffix          # unique namespace per node: "LNK__nd1"
+    r.network_id = idx
+self.add_lines(model.lines)              # GridCore creates v_forward, v_reverse >= 0
+                                         # and encodes S·v = 0 for every bus
+```
+
+#### `objective_[nd]` constraint
+
+```python
+# network.py : 278-286
+o = self.solver.interface.Objective.clone(model.objective, model=self.solver)
+obj += o.expression * row.capacity       # accumulates for network_objective
+node_obj = self.problem.Constraint(
+    o.expression, name="objective_" + idx, lb=0.0   # lb=0 → dispatch_nd >= 0
+)
+self.add_cons_vars([node_obj])
+```
+
+#### `network_objective` variable + equality constraint
+
+```python
+# util.py : 205-210  /  network.py : 297-298
+def add_var_from_expression(model, name, expr, lb=None, ub=None):
+    var = model.problem.Variable(name, lb=lb, ub=ub)
+    const = model.problem.Constraint(
+        (var - expr).expand(), lb=0, ub=0, name=name + "_equality"
+    )                                    # network_objective = Σ capacity_nd × dispatch_nd
+    model.add_cons_vars([var, const])
+    return var
+
+net_obj = add_var_from_expression(self, "network_objective", obj, lb=0)
+self.objective = self.problem.Objective(net_obj, direction="max")
+```
+
+#### Transfer flow bounds + capacity coupling
+
+```python
+# network.py : 323-385  (__add_transfers)
+export = len(r.sinks) == 1
+lb = r.lower_bound / self.mass if export else -r.upper_bound / self.mass
+
+coef = info.capacity
+r.add_buses({medium_bus: coef if export else -coef})  # capacity as incidence coef
+```
+
+#### Solver selection and Gurobi config
+
+```python
+# network.py : 138-143
+solver = [s for s in ["cplex", "gurobi", "hybrid", "glpk"]
+          if s in gridcore.util.solver.solvers][0]
+
+# util.py : 298-307
+if interface == "gurobi":
+    solver.configuration.lp_method = "barrier"
+    solver.problem.Params.BarConvTol = 1e-9
+    solver.problem.Params.CrossoverBasis = 1
+    solver.problem.Params.NumericFocus = 2
+    solver.problem.Params.Threads = 1
+```
+
+---
+
+### Step 2 — Cooperative Tradeoff
+
+#### Main function
+
+```python
+# problems.py : 70-100
+def cooperative_tradeoff(network, min_dispatch, fraction, flows, pfba, atol, rtol):
+    with network as net:
+        _apply_min_dispatch(network, min_dispatch)     # optional: objective_[nd].lb = min_dispatch_nd
+
+        # Phase 1 ─────────────────────────────────────────────────────────
+        net.objective = net.scale * net.variables.network_objective
+        min_dispatch = optimize_with_retry(net, ...) / net.scale
+
+        # Phase 2 ─────────────────────────────────────────────────────────
+        regularize_l2_norm(net, 0.0)
+        for fr in fraction:
+            net.variables.network_objective.lb = fr * min_dispatch   # dispatch floor
+            net.variables.network_objective.ub = min_dispatch        # dispatch ceiling
+            sol = solve(network, flows=flows, pfba=pfba, ...)
+            if not pfba and sol.status != OPTIMAL:
+                sol = crossover(net, sol, flows=flows)
+```
+
+#### Phase 1 — LP objective + solver call
+
+```python
+# problems.py : 78  /  solution.py : 214-223
+net.objective = net.scale * net.variables.network_objective   # maximize
+
+def optimize_with_retry(net, message):
+    sol = net.optimize()           # first solver call (LP)
+    if sol is None:
+        network.solver.problem.reset()   # Gurobi reset on failure
+        sol = net.optimize()
+    return sol.objective_value
+```
+
+#### Phase 1 — Optional individual min dispatch
+
+```python
+# util.py : 274-283
+for nd in network.nodes:
+    obj = network.constraints["objective_" + nd]
+    obj.lb = (1.0 - rtol) * min_dispatch[nd] - atol
+    if obj.lb < atol:
+        obj.lb = 0
+```
+
+#### Phase 2 — L2 objective construction (LP → QP)
+
+```python
+# problems.py : 53-66
+def regularize_l2_norm(network, min_dispatch):
+    l2 = Zero
+    for nd in network.nodes:
+        node_obj = network.constraints["objective_" + nd]
+        ex = sum(v for v in node_obj.variables if (v.ub - v.lb) > 1e-6)
+        if not isinstance(ex, int):
+            l2 += (network.scale * (ex**2)).expand()   # quadratic term per node
+    network.objective = -l2                            # minimize L2 ≡ maximize -L2
+```
+
+#### Phase 2 — Solver call + reading the solution
+
+```python
+# solution.py : 177-196, 103-119
+def solve(network, ...):
+    network.solver.optimize()                          # QP solver call (Gurobi)
+    if pfba and flows:
+        add_pfba_objective(network, atol, rtol)
+        network.solver.optimize()
+    return NetworkSolution(network)
+
+# reading dispatch rates from primal values
+gcs[nd] = network.constraints["objective_" + nd].primal
+if interface == "gurobi":
+    gcs = gcs.abs()                                    # Gurobi/optlang bug workaround
+```
+
+#### Phase 2 — Crossover fallback (if QP returns non-optimal)
+
+```python
+# solution.py : 237-251
+net.variables.network_objective.ub = net_dispatch + 1e-6
+net.objective = net.scale * net.variables.network_objective   # back to LP
+for nd in net.nodes:
+    net.constraints["objective_" + nd].ub = max(const.lb, gcs[nd])  # fix QP dispatch rates
+```
+
+---
+
+## A.2 Supply Math to Code
+
+### Part 1 — Supply as a Constraint (`cooperative_tradeoff`)
+
+#### Import flow upper bound
+
+$$0 \leq v_{\text{import},i} \leq v_i$$
+
+where $v_i$ is derived from the site's raw supply:
+
+$$v_i = \frac{D_i \times (1 - A_i) \times 1000}{Mw_i \times B_{total}}$$
+
+→ `grow.py:55` (`net.medium = medium[medium.index.isin(ex_ids)]`)
+
+Active in both steps of `cooperative_tradeoff`:
+
+- Step 1 (LP): limits the feasible space for maximizing network dispatch
+- Step 2 (QP): same bounds apply when redistributing flows under the tradeoff constraint
+
+---
+
+### Part 2 — Supply as a Decision Variable (`supply_optimizer.py`)
+
+#### Decision Variables
+
+**$f_i$ — Amount of source $i$ (units)**
+
+$$f_i \in [\,f_i^{\min},\ f_i^{\max}\,]$$
+
+```
+min_amt = current_amt × (1 − max_source_change_pct / 100)
+max_amt = current_amt × (1 + max_source_change_pct / 100)
+```
+
+For new candidate sources: $f_i \in [0,\ 200u]$
+
+→ `supply_optimizer.py:457` (existing sources) · `supply_optimizer.py:468` (new candidate sources)
+
+**$a_i$ — Addition relative to current profile**
+
+$$a_i \in [\,0,\ \max(0,\ f_i^{\max} - f_i^{\text{current}})\,]$$
+
+If $f_i^{\max} < f_i^{\text{current}}$, the upper bound is clamped to 0 and $a_i = 0$.
+
+→ `supply_optimizer.py:460`
+
+**$r_i$ — Reduction relative to current profile**
+
+$$r_i \in [\,0,\ \max(0,\ f_i^{\text{current}} - f_i^{\min})\,]$$
+
+If $f_i^{\text{current}} < f_i^{\min}$, the upper bound is clamped to 0 and $r_i = 0$.
+
+→ `supply_optimizer.py:461`
+
+**$\delta_i \in \{0, 1\}$ — Was source $i$ modified?** Binary indicator variable.
+
+→ `supply_optimizer.py:480`
+
+---
+
+#### Constraints
+
+**Source balance**
+
+$$f_i = f_i^{\text{current}} + a_i - r_i$$
+
+→ `supply_optimizer.py:475`
+
+**Max sources changed**
+
+$$\sum_i \delta_i \leq N$$
+
+→ `supply_optimizer.py:488`
+
+**Change indicator (big-M)**
+
+$$a_i + r_i \leq 1000 \cdot \delta_i$$
+
+→ `supply_optimizer.py:484` (existing) · `supply_optimizer.py:486` (new candidates)
+
+**Load constraints**
+
+$$\text{load}^{\min} \leq \sum_i \frac{\text{load}_i}{100} \cdot f_i \leq \text{load}^{\max}$$
+
+→ `supply_optimizer.py:991–1004` · `supply_optimizer.py:971` (`_add_load_constraints()`) · `supply_optimizer.py:491`
+
+**FBA — Line flow bounds** *(optional, requires `--model`)*
+
+$$v_r^{\min} \leq v_r \leq v_r^{\max} \quad \forall r$$
+
+→ `supply_optimizer.py:1103`
+
+**FBA — Incidence steady-state** *(optional, requires `--model`)*
+
+$$\sum_r S_{m,r} \cdot v_r = 0 \quad \forall m$$
+
+→ `supply_optimizer.py:1107–1113` (inside `_embed_network_model()`)
+
+**FBA — Supply-transfer linking** *(optional, requires `--model`)*
+
+$$v_{EX_i} + \frac{\text{supply\_flux}_i}{\text{FLUX\_CONVERSION\_FACTOR}} \geq 0$$
+
+Same structure as Part 1, but $v_i^{\text{supply}}$ is a linear expression in $f_i$ rather than a fixed value.
+
+→ `supply_optimizer.py:1119–1131` · `supply_optimizer.py:500`
+
+---
+
+#### Objective Function
+
+$$\min \underbrace{\sum_i \text{penalty} \cdot (a_i + r_i)}_{\text{minimize perturbation}} + \underbrace{\sum_j w_j \cdot \text{obj\_term}_j}_{\text{operating objective}}$$
+
+**`obj_term` routing:**
+
+- With FBA model → `obj_term` = FBA flow variable $v_{EX_j}$
+- Without model → `obj_term` = supply flow expression $\sum_i \text{coeff}_{ij} \cdot f_i$
+
+→ `supply_optimizer.py:507–513` (perturbation penalty)
+→ `supply_optimizer.py:515–542` (operating objective, handles `RES_total`)
+→ `supply_optimizer.py:544` (`gmodel.setObjective(obj_expr, GRB.MINIMIZE)`)
+→ `supply_optimizer.py:1037` (`_add_objective_term()`)
+→ `supply_optimizer.py:1051–1058` (FBA path) · `supply_optimizer.py:1063–1068` (supply flow fallback)
+
+---
+
+#### Supply Flow Expressions
+
+$$\text{flow}_{m} = \sum_i \frac{g_{m,i}}{100} \cdot \frac{1000}{Mw_m} \cdot f_i$$
+
+→ `supply_optimizer.py:1006` (`_build_flow_expressions()`)
+→ `supply_optimizer.py:1028` (coefficient computation)
+→ `supply_optimizer.py:494` (called from `_solve_with_gurobi`)

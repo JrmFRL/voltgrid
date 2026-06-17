@@ -1,0 +1,15 @@
+/* Section separator — all h1 get a top border */
+h1 {
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-top: 3px solid #adb5bd;
+}
+
+/* Exclude the page/book title */
+.title,
+.quarto-title-block h1,
+h1.title {
+  margin-top: 0;
+  border-top: none;
+}

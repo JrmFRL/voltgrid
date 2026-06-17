@@ -1,0 +1,59 @@
+project:
+  type: book
+
+book:
+  title: "Voltgrid Engine Assessment"
+  author: "Heliform Analytics"
+  date: today
+
+  chapters:
+    - index.qmd
+    - part: "Core modeling engine"
+      chapters:
+        - core_engine/documentation/index.qmd
+        - core_engine/validation/index.md
+        - core_engine/roadmap/index.md
+    - part: "Long-term R&D vision"
+      chapters:
+        - bio/features/index.md
+        - bio/sponsors/index.md
+    - part: "Change and integration"
+      chapters:
+        - change/usage_rampup.md
+        - change/datasets.md
+
+format:
+  html:
+    theme: cosmo
+    css: custom.css
+    page-layout: article
+
+    # Table of contents
+    toc: true
+    toc-depth: 3
+    toc-location: left
+    toc-title: "On this page"
+    toc-expand: 1
+    number-sections: false
+
+    # Code display
+    code-fold: true
+    code-summary: "Show code"
+    code-tools: false
+    code-copy: true
+    code-block-bg: true
+    code-overflow: wrap
+    highlight-style: github
+
+
+  pdf:
+    documentclass: scrreprt
+    toc: true
+    toc-depth: 3
+    number-sections: false
+    colorlinks: true
+    geometry:
+      - top=30mm
+      - left=20mm
+      - right=20mm
+      - bottom=30mm

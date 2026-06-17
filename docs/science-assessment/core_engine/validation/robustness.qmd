@@ -1,0 +1,3 @@
+## Robustness Plan for Calls to Optimization Solver
+
+Handling solver failures, numerical instabilities, and edge cases in production.

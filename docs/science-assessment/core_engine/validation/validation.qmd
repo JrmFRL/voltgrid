@@ -1,0 +1,17 @@
+## Validation Using Measurement Datasets
+
+::: {.callout-warning title="Proposed plan"}
+Here is the plan as I see it — let me know if it looks OK:
+
+- INTRO:
+  - Reminder of why it is not obvious to find datasets and carry out this validation
+  - Which results exactly interest us, in the absolute? (which flows, the dispatch rates of which nodes?)
+  - Reminder that what interests us is not necessarily an absolute error per sample, but rather R2 values at the scale of a whole fleet
+- ALREADY DONE: an experiment presented at the steering committee
+  - Presentation of the study context
+  - Presentation of the results obtained
+  - Link to the study and the results in the application?
+- PLAN
+  - Will there be internal partner data available a priori? Will it be hard to obtain? (I imagine so)
+  - Which open-source datasets are possible?
+:::

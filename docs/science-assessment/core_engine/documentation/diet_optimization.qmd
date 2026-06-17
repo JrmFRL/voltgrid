@@ -1,0 +1,3 @@
+# 1.e Supply Optimization
+
+> Identifying supply profiles that maximize a target operating output for the network.

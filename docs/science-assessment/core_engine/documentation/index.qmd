@@ -1,0 +1,8 @@
+# Documentation of the current core engine
+
+{{< include processing.qmd >}}
+{{< include core_modeling.qmd >}}
+{{< include diets_complements.qmd >}}
+{{< include minimal_media.qmd >}}
+{{< include diet_optimization.qmd >}}
+{{< include appendix.qmd >}}

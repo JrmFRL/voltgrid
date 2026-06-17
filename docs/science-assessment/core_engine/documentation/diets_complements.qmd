@@ -1,0 +1,134 @@
+# 1.c Supply Profiles and Add-ons
+
+> How supply inputs and reserve injections are incorporated as constraints on transfer flows.
+
+---
+
+## Supply File Format
+
+In the pipeline, a supply profile is passed to GridFlow as a **packed artifact** (zipped archive). Inside this archive, the core data is a **CSV file** with two essential columns:
+
+| Column | Description |
+|--------|-------------|
+| `id` | Transfer line identifier (e.g. `EX_pv__D_e` for solar import) |
+| `flux` | Maximum import flow for that source ($kW \cdot h^{-1} \cdot MVA^{-1}$) |
+
+Each row represents one source available in the grid environment. The `id` maps directly to a transfer line in the network model.
+
+## What is a Flow?
+
+A **flow** ($v_i$) is the rate at which power is drawn or produced by a transfer line. In the context of a supply profile, it represents the **maximum quantity of power that nodes can import per unit time and per unit of installed capacity**.
+
+The unit $kW \cdot h^{-1} \cdot MVA^{-1}$ breaks down as:
+
+- $kW$: amount of power (kilowatts)
+- $h^{-1}$: per hour
+- $MVA^{-1}$: normalized by total installed capacity
+
+This normalization by $MVA$ is key: the flow value is **independent of the site's footprint**. It expresses a rate relative to the network itself, not to the external load.
+
+The conversion from raw supply to flow is:
+
+$$v_i = \frac{D_i \times (1 - A_i) \times 1000}{Mw_i \times B_{total}}$$
+
+| Symbol | Description | Unit |
+|--------|-------------|------|
+| $v_i$ | Maximum flow available to nodes | $kW \cdot h^{-1} \cdot MVA^{-1}$ |
+| $D_i$ | Raw supply of source $i$ | $kW \cdot h^{-1}$ |
+| $A_i$ | Upstream losses (before the bus) | unitless |
+| $Mw_i$ | Conversion factor of source $i$ | $kW \cdot unit^{-1}$ |
+| $B_{total}$ | Total installed capacity | $MVA$ |
+
+---
+
+## Supply as a Constraint in the Optimization
+
+Inside `cooperative_tradeoff`, the supply profile is **not a decision variable** — it is a **constraint** on import flows, applied before any optimization begins (`grow.py:55`):
+
+```python
+net.medium = medium[medium.index.isin(ex_ids)]
+```
+
+This sets an upper bound on each transfer line:
+
+$$0 \leq v_{\text{import},i} \leq v_i$$
+
+Nodes cannot draw more than what the supply allows. This is the operating ceiling imposed on the optimization problem.
+
+The supply profile therefore contributes to both phases:
+
+- **Phase 1 (LP)**: limits the feasible space for maximizing network dispatch
+- **Phase 2 (QP)**: same bounds apply when redistributing flows under the tradeoff constraint
+
+---
+
+## Supply as a Decision Variable (Supply Optimizer)
+
+In `supply_optimizer.py`, the logic is reversed: the goal is to find **which supply profile to schedule** in order to reach an operating objective (e.g. maximize reserve power output).
+
+### Decision Variables
+
+| Variable | Description | Bounds |
+|----------|-------------|--------|
+| $f_i$ | Amount of source $i$ (units) | $[f_i^{\min},\ f_i^{\max}]$ |
+| $a_i$ | Addition relative to current profile | $[0,\ f_i^{\max} - f_i^{\text{current}}]$ |
+| $r_i$ | Reduction relative to current profile | $[0,\ f_i^{\text{current}} - f_i^{\min}]$ |
+| $\delta_i \in \{0,1\}$ | Binary indicator: was source $i$ modified? | — |
+
+### Constraints
+
+| Constraint | Expression | Purpose |
+|------------|------------|---------|
+| Source balance | $f_i = f_i^{\text{current}} + a_i - r_i$ | Tracks net change per source |
+| Max sources changed | $\sum_i \delta_i \leq N$ | Limits schedule complexity |
+| Change indicator | $a_i + r_i \leq 1000 \cdot \delta_i$ | Links binary to actual change |
+| Load envelope | $\text{load}_{\min} \leq \sum_i f_i \cdot \text{kW}_i \leq \text{load}_{\max}$ | Operating feasibility |
+| FBA — balance *(optional)* | $\sum_r S_{m,r} \cdot v_r = 0$ for each bus $m$ | Incidence feasibility of grid operation |
+| FBA — supply coupling *(optional)* | $v_{EX_i} \geq -\dfrac{\text{supply\_flux}_i}{\text{FLUX\_CONVERSION\_FACTOR}}$ | Node draw cannot exceed what the supply provides |
+
+::: {.callout-note}
+## FBA constraints change the nature of the problem
+Without `--model`: the objective operates on supply flows directly — the optimizer reasons about source quantities and their power content.
+
+With `--model`: the balance constraints are injected via `_embed_network_model()`, coupling the supply to actual grid operation. The optimizer now reasons about true network flows (e.g. reserve output as a result of node dispatch), not just supply composition.
+:::
+
+### Objective Function
+
+$$\min \sum_i \text{penalty} \cdot (a_i + r_i) - \sum_j w_j \cdot v_j^{\text{objective}}$$
+
+Minimize supply perturbation while maximizing the target operating flow (e.g. reserve export `EX_res(e)`).
+
+---
+
+## Pipeline: Sources → Flows → Constraints
+
+```
+Site supply (units/day)
+      │
+      │  v_i = D_i × (1 - A_i) × 1000 / (Mw_i × B_total)
+      ▼
+Source flows (kW/h/MVA)
+      │
+      │  net.medium = medium[...]
+      ▼
+Upper bounds on import lines in cooperative_tradeoff
+```
+
+---
+
+::: {.callout-important}
+## ⚠ TO DO — Supply Toolbox
+
+This section is missing a presentation of the **supply toolbox** and how it works:
+
+- What is the supply toolbox and what problem does it solve?
+- How does it convert raw source/power data into transfer flows compatible with GridFlow?
+- What databases or source catalog tables does it rely on?
+- How does it handle loss rates $A_i$ and conversion factors $Mw_i$?
+- How does it interface with the supply optimizer and the cooperative tradeoff pipeline?
+
+**This must be documented before this chapter can be considered complete.**
+:::
+
+---

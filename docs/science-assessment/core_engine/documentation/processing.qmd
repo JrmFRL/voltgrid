@@ -1,0 +1,8 @@
+## Processing
+
+Pipeline steps that occur before the optimization solver is called.
+
+::: {.callout-warning title="Question for the engine team"}
+Which processing steps make sense to describe here?
+To what extent might they affect the definition of our optimization problems?
+:::

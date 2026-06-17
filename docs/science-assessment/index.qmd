@@ -1,0 +1,44 @@
+# Introduction {.unnumbered}
+
+## What Voltgrid Does
+
+The goal of Voltgrid is to **simulate a distributed energy grid at steady state**: given a supply
+profile (available primary energy) and a current grid composition (generator capacities), find the
+power-dispatch state the network converges to at equilibrium.
+
+At equilibrium, two quantities fully describe the grid:
+
+- **Dispatch rates** $\mu_i$ per generator — which nodes are active and at what rate they deliver
+  power, consistent with their installed capacities.
+- **Power flows** $v^i_x$ per line per generator — what each node draws and exports,
+  including transfer flows exchanged between nodes and power exported to the external load.
+
+Together these define a complete operating portrait of the grid: not only *which nodes are present*
+(capacity) but *what they are doing* (dispatch) — which flows are produced, consumed,
+and ultimately available to the load.
+
+::: {.callout-note}
+## Why steady state?
+The optimization does not model dynamics over time.
+It finds the flow distribution that satisfies all balance constraints simultaneously —
+the state the network would reach if given sufficient time to settle on the provided supply profile.
+:::
+
+---
+
+## Document Map
+
+1. **Technical documentation of the engine**
+    - 1.a Processing — pipeline steps before the optimization starts
+    - 1.b Understanding the optimization engine
+    - 1.c Supply profiles and add-ons
+    - 1.d Minimal supply
+    - 1.e Supply optimization
+
+2. **Assessing the validity of current methodology**
+    - 2.a Validation using measurement datasets
+    - 2.b Sensitivity analysis
+    - 2.c Robustness plan for calls to optimization solver
+
+3. **Securing IP while improving current engine**
+    - 3.a Using training to correct errors

@@ -1,0 +1,206 @@
+# 1.b Optimization Engine
+
+> Notation follows the [GridFlow engine reference](https://example.com/gridflow/logic.html).
+> Code variable names are given in parentheses.
+
+---
+
+## Overview
+
+Voltgrid splits the optimization into two successive steps.
+
+**Step 1 — Problem Setup** assembles the LP structure: nodes are loaded, balance
+constraints ($S \cdot v = 0$) are encoded, and individual and network dispatch objectives
+are defined. No solver is called at this stage.
+
+**Step 2 — Cooperative Tradeoff** then solves the problem in two phases.
+The need for two phases comes from a well-known failure mode of classic dispatch applied to networks:
+a single highly efficient node can monopolize all available supply and drive every other
+member to zero output. To prevent this, GridFlow introduces a tradeoff parameter $\alpha \in [0,1]$
+that relaxes the network dispatch constraint, giving lower-output nodes room to remain active.
+
+Concretely:
+
+1. **Phase 1 (LP)** — run a standard dispatch to obtain the maximum achievable network dispatch rate $\mu_c^*$.
+2. **Phase 2 (QP)** — fix $\mu_c \geq \alpha \cdot \mu_c^*$ and minimize $\sum_i \mu_i^2$,
+   which distributes dispatch as evenly as possible across all nodes.
+
+This approach is much faster than multi-objective alternatives and yields an optimum conceptually
+similar to fair-share dispatch: each node operates at its maximum rate without diminishing the output of
+others — hence *cooperative*. In the absence of additional constraints, the resulting dispatch rates
+are correlated with node capacity within a network, not as a prior assumption but as a direct
+consequence of the optimization.
+
+---
+
+## General Schema
+
+```{mermaid}
+%%{init: {"flowchart": {"useMaxWidth": true, "nodeSpacing": 50, "rankSpacing": 55}}}%%
+flowchart TD
+    subgraph STEP1["STEP 1 — Problem Setup"]
+        S1A["Load and assemble nodes<br/><code>Network.__init__()</code>"]
+        S1B["Build balance constraints S·v = 0<br/><code>add_lines()</code>"]
+        S1C["Create individual objectives μᵢ and network objective μc<br/><code>objective_[nd]</code>  ·  <code>network_objective</code>"]
+        S1A --> S1B --> S1C
+    end
+
+    subgraph STEP2["STEP 2 — Cooperative Tradeoff"]
+        S2P1["<b>Phase 1 — LP</b><br/>maximize  μc = Σ b̃ᵢ · μᵢ"]
+        S2P1 --> MG["μc* —  maximum achievable network dispatch rate"]
+        MG --> S2P2["<b>Phase 2 — QP</b><br/>minimize  Σᵢ μᵢ²   subject to   α · μc* ≤ μc ≤ μc*"]
+        S2P2 --> OUT["NetworkSolution  —  individual dispatch rate μᵢ per node"]
+    end
+
+    STEP1 --> STEP2
+
+    style S1A fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f
+    style S1B fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f
+    style S1C fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f
+    style STEP1 fill:#eff6ff,stroke:#3b82f6,color:#1e40af
+    style STEP2 fill:#f0fdf4,stroke:#22c55e,color:#14532d
+    style S2P1 fill:#dcfce7,stroke:#16a34a,color:#14532d
+    style S2P2 fill:#dcfce7,stroke:#16a34a,color:#14532d
+    style MG fill:#fef9c3,stroke:#ca8a04,color:#713f12
+    style OUT fill:#f0fdf4,stroke:#16a34a,color:#14532d
+```
+
+---
+
+## Notation
+
+| Symbol | Meaning | Code variable |
+|--------|---------|---------------|
+| $v^i_x$ | Flow of line $x$ in node $i$ | `v_forward`, `v_reverse` per line |
+| $\mu_i$ | Dispatch rate of node $i$ | `objective_[nd]` (constraint primal value) |
+| $\mu_c$ | Network dispatch rate $= \sum_i \tilde{b}_i \cdot \mu_i$ | `network_objective` |
+| $\mu_c^*$ | Maximum achievable network dispatch rate | `min_dispatch` (output of Phase 1) |
+| $\tilde{b}_i$ | Relative capacity of node $i$ : $b_i / \sum_j b_j$ | `row.capacity` |
+| $\alpha$ | Tradeoff parameter $\in [0, 1]$ | `fraction` |
+| $S$ | Incidence matrix | encoded by GridCore via `add_lines()` |
+
+---
+
+## Step 2 — Cooperative Tradeoff
+
+The LP assembled in Step 1 is solved in two successive phases.
+Phase 2 **replaces the objective in place** (LP → QP) before calling the solver again —
+the constraint structure is not rebuilt.
+
+::: {.callout-note}
+## Why two phases?
+Phase 1 finds the theoretical maximum dispatch rate $\mu_c^*$.
+Phase 2 then asks: *given that the network dispatches at least at $\alpha \cdot \mu_c^*$,
+what is the most equitable distribution of dispatch rates across nodes?*
+The two-phase structure avoids solving a bilevel problem directly.
+:::
+
+---
+
+### Base problem — shared by both phases
+
+**Decision variables**
+
+| Variable | Description |
+|----------|-------------|
+| $v^i_x$ | Flow of each line in each node (all nodes combined) |
+| $\mu_i$ &nbsp; (`objective_[nd]`) | Individual dispatch rate — stored as a constraint, read as primal value |
+| $\mu_c$ &nbsp; (`network_objective`) | Network dispatch rate, linked by equality to $\sum_i \tilde{b}_i \cdot \mu_i$ |
+
+**Constraints**
+
+| Constraint | Formulation |
+|------------|-------------|
+| Balance | $S \cdot v = 0$ for every bus in every node |
+| Non-negative dispatch | $\mu_i \geq 0$ for every node $i$ |
+| Transfer flow bounds | import bound $/ B$, export bound unchanged (supply-controlled) |
+| Capacity coupling | Stoichiometric coefficient on shared bus $= \tilde{b}_i$ |
+| Network objective | $\mu_c = \sum_i \tilde{b}_i \cdot \mu_i$ (equality constraint) |
+
+::: {.callout-warning}
+## S·v = 0 is never explicit
+The incidence matrix $S$ is never built as a matrix object.
+It is encoded implicitly by GridCore: each bus becomes a constraint,
+and each line writes its incidence coefficients into that constraint via
+`set_linear_coefficients()`.
+:::
+
+---
+
+### Phase 1 vs Phase 2
+
+::: {.panel-tabset}
+
+## Phase 1 — LP
+
+**Objective**
+
+$$\max \quad \mu_c = \sum_i \tilde{b}_i \cdot \mu_i$$
+
+**Additional constraint** *(optional — only if `min_dispatch` is specified)*
+
+$$\mu_i \geq \mu_i^{\min} \quad \forall\, i$$
+
+**Solver call**
+
+```python
+# problems.py : 78-82
+net.objective = net.scale * net.variables.network_objective
+min_dispatch = optimize_with_retry(net, ...) / net.scale
+```
+
+**Output** → $\mu_c^*$ : maximum achievable network dispatch rate (`min_dispatch`)
+
+::: {.callout-tip}
+## This is a standard LP
+Phase 1 is a plain linear program. Any solver works (GLPK, CPLEX, Gurobi).
+The result $\mu_c^*$ is used only as a bound in Phase 2 — it is not the final answer.
+:::
+
+## Phase 2 — QP
+
+**Objective**
+
+$$\min \quad \sum_i \mu_i^2$$
+
+> Minimizing the sum of squares penalizes solutions where one node monopolizes dispatch.
+> It finds the dispatch rate distribution closest to equal sharing across nodes.
+
+**Additional constraints**
+
+$$\alpha \cdot \mu_c^* \leq \mu_c \leq \mu_c^*$$
+
+where $\alpha$ (`fraction`) is the tradeoff parameter set by the user.
+
+**Objective construction in code**
+
+```python
+# problems.py : 53-66
+def regularize_l2_norm(network, min_dispatch):
+    l2 = Zero
+    for nd in network.nodes:
+        node_obj = network.constraints["objective_" + nd]
+        ex = sum(v for v in node_obj.variables if (v.ub - v.lb) > 1e-6)
+        if not isinstance(ex, int):
+            l2 += (network.scale * (ex**2)).expand()
+    network.objective = -l2   # minimize L2 ≡ maximize -L2
+```
+
+**Output** → `NetworkSolution` : individual dispatch rate $\mu_i$ per node
+
+::: {.callout-warning}
+## Requires a QP-capable solver
+Phase 2 introduces a quadratic objective. GLPK cannot solve it.
+Gurobi, CPLEX, or the hybrid solver are required.
+:::
+
+:::
+
+---
+
+## Summary
+
+| Phase | Objective | Key added constraint | Solver required | Output |
+|-------|-----------|----------------------|-----------------|--------|
+| 1 — LP | maximize $\mu_c = \sum_i \tilde{b}_i \cdot \mu_i$ | $\mu_i \geq \mu_i^{\min}$ (optional) | Any (LP) | $\mu_c^*$ (scalar) |
+| 2 — QP | minimize $\sum_i \mu_i^2$ | $\alpha \cdot \mu_c^* \leq \mu_c \leq \mu_c^*$ | QP-capable (Gurobi / CPLEX) | `NetworkSolution` ($\mu_i$ per node) |
