@@ -1,0 +1,285 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Voltgrid Engine Assessment",
+    "section": "",
+    "text": "Introduction",
+    "crumbs": [
+      "Introduction"
+    ]
+  },
+  {
+    "objectID": "index.html#what-voltgrid-does",
+    "href": "index.html#what-voltgrid-does",
+    "title": "Voltgrid Engine Assessment",
+    "section": "What Voltgrid Does",
+    "text": "What Voltgrid Does\nThe goal of Voltgrid is to simulate a distributed energy grid at steady state: given a supply profile (available primary energy) and a current grid composition (generator capacities), find the power-dispatch state the network converges to at equilibrium.\nAt equilibrium, two quantities fully describe the grid:\n\nDispatch rates \\(\\mu_i\\) per generator — which nodes are active and at what rate they deliver power, consistent with their installed capacities.\nPower flows \\(v^i_x\\) per line per generator — what each node draws and exports, including transfer flows exchanged between nodes and power exported to the external load.\n\nTogether these define a complete operating portrait of the grid: not only which nodes are present (capacity) but what they are doing (dispatch) — which flows are produced, consumed, and ultimately available to the load.\n\n\n\n\n\n\nNoteWhy steady state?\n\n\n\nThe optimization does not model dynamics over time. It finds the flow distribution that satisfies all balance constraints simultaneously — the state the network would reach if given sufficient time to settle on the provided supply profile.",
+    "crumbs": [
+      "Introduction"
+    ]
+  },
+  {
+    "objectID": "index.html#document-map",
+    "href": "index.html#document-map",
+    "title": "Voltgrid Engine Assessment",
+    "section": "Document Map",
+    "text": "Document Map\n\nTechnical documentation of the engine\n\n1.a Processing — pipeline steps before the optimization starts\n1.b Understanding the optimization engine\n1.c Supply profiles and add-ons\n1.d Minimal supply\n1.e Supply optimization\n\nAssessing the validity of current methodology\n\n2.a Validation using measurement datasets\n2.b Sensitivity analysis\n2.c Robustness plan for calls to optimization solver\n\nSecuring IP while improving current engine\n\n3.a Using training to correct errors",
+    "crumbs": [
+      "Introduction"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html",
+    "href": "core_engine/documentation/index.html",
+    "title": "Documentation of the current core engine",
+    "section": "",
+    "text": "Processing\nPipeline steps that occur before the optimization solver is called.",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html#processing",
+    "href": "core_engine/documentation/index.html#processing",
+    "title": "Documentation of the current core engine",
+    "section": "",
+    "text": "WarningQuestion for the engine team\n\n\n\nWhich processing steps make sense to describe here? To what extent might they affect the definition of our optimization problems?",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html#overview",
+    "href": "core_engine/documentation/index.html#overview",
+    "title": "Documentation of the current core engine",
+    "section": "Overview",
+    "text": "Overview\nVoltgrid splits the optimization into two successive steps.\nStep 1 — Problem Setup assembles the LP structure: nodes are loaded, balance constraints (\\(S \\cdot v = 0\\)) are encoded, and individual and network dispatch objectives are defined. No solver is called at this stage.\nStep 2 — Cooperative Tradeoff then solves the problem in two phases. The need for two phases comes from a well-known failure mode of classic dispatch applied to networks: a single highly efficient node can monopolize all available supply and drive every other member to zero output. To prevent this, GridFlow introduces a tradeoff parameter \\(\\alpha \\in [0,1]\\) that relaxes the network dispatch constraint, giving lower-output nodes room to remain active.\nConcretely:\n\nPhase 1 (LP) — run a standard dispatch to obtain the maximum achievable network dispatch rate \\(\\mu_c^*\\).\nPhase 2 (QP) — fix \\(\\mu_c \\geq \\alpha \\cdot \\mu_c^*\\) and minimize \\(\\sum_i \\mu_i^2\\), which distributes dispatch as evenly as possible across all nodes.\n\nThis approach is much faster than multi-objective alternatives and yields an optimum conceptually similar to fair-share dispatch: each node operates at its maximum rate without diminishing the output of others — hence cooperative. In the absence of additional constraints, the resulting dispatch rates are correlated with node capacity within a network, not as a prior assumption but as a direct consequence of the optimization.",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html#general-schema",
+    "href": "core_engine/documentation/index.html#general-schema",
+    "title": "Documentation of the current core engine",
+    "section": "General Schema",
+    "text": "General Schema\n\n\n\n\n\n%%{init: {\"flowchart\": {\"useMaxWidth\": true, \"nodeSpacing\": 50, \"rankSpacing\": 55}}}%%\nflowchart TD\n    subgraph STEP1[\"STEP 1 — Problem Setup\"]\n        S1A[\"Load and assemble nodes&lt;br/&gt;&lt;code&gt;Network.__init__()&lt;/code&gt;\"]\n        S1B[\"Build balance constraints S·v = 0&lt;br/&gt;&lt;code&gt;add_lines()&lt;/code&gt;\"]\n        S1C[\"Create individual objectives μᵢ and network objective μc&lt;br/&gt;&lt;code&gt;objective_[nd]&lt;/code&gt;  ·  &lt;code&gt;network_objective&lt;/code&gt;\"]\n        S1A --&gt; S1B --&gt; S1C\n    end\n\n    subgraph STEP2[\"STEP 2 — Cooperative Tradeoff\"]\n        S2P1[\"&lt;b&gt;Phase 1 — LP&lt;/b&gt;&lt;br/&gt;maximize  μc = Σ b̃ᵢ · μᵢ\"]\n        S2P1 --&gt; MG[\"μc* —  maximum achievable network dispatch rate\"]\n        MG --&gt; S2P2[\"&lt;b&gt;Phase 2 — QP&lt;/b&gt;&lt;br/&gt;minimize  Σᵢ μᵢ²   subject to   α · μc* ≤ μc ≤ μc*\"]\n        S2P2 --&gt; OUT[\"NetworkSolution  —  individual dispatch rate μᵢ per node\"]\n    end\n\n    STEP1 --&gt; STEP2\n\n    style S1A fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f\n    style S1B fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f\n    style S1C fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f\n    style STEP1 fill:#eff6ff,stroke:#3b82f6,color:#1e40af\n    style STEP2 fill:#f0fdf4,stroke:#22c55e,color:#14532d\n    style S2P1 fill:#dcfce7,stroke:#16a34a,color:#14532d\n    style S2P2 fill:#dcfce7,stroke:#16a34a,color:#14532d\n    style MG fill:#fef9c3,stroke:#ca8a04,color:#713f12\n    style OUT fill:#f0fdf4,stroke:#16a34a,color:#14532d",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html#notation",
+    "href": "core_engine/documentation/index.html#notation",
+    "title": "Documentation of the current core engine",
+    "section": "Notation",
+    "text": "Notation\n\n\n\n\n\n\n\n\nSymbol\nMeaning\nCode variable\n\n\n\n\n\\(v^i_x\\)\nFlow of line \\(x\\) in node \\(i\\)\nv_forward, v_reverse per line\n\n\n\\(\\mu_i\\)\nDispatch rate of node \\(i\\)\nobjective_[nd] (constraint primal value)\n\n\n\\(\\mu_c\\)\nNetwork dispatch rate \\(= \\sum_i \\tilde{b}_i \\cdot \\mu_i\\)\nnetwork_objective\n\n\n\\(\\mu_c^*\\)\nMaximum achievable network dispatch rate\nmin_dispatch (output of Phase 1)\n\n\n\\(\\tilde{b}_i\\)\nRelative capacity of node \\(i\\) : \\(b_i / \\sum_j b_j\\)\nrow.capacity\n\n\n\\(\\alpha\\)\nTradeoff parameter \\(\\in [0, 1]\\)\nfraction\n\n\n\\(S\\)\nIncidence matrix\nencoded by GridCore via add_lines()",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html#step-2-cooperative-tradeoff",
+    "href": "core_engine/documentation/index.html#step-2-cooperative-tradeoff",
+    "title": "Documentation of the current core engine",
+    "section": "Step 2 — Cooperative Tradeoff",
+    "text": "Step 2 — Cooperative Tradeoff\nThe LP assembled in Step 1 is solved in two successive phases. Phase 2 replaces the objective in place (LP → QP) before calling the solver again — the constraint structure is not rebuilt.\n\n\n\n\n\n\nNoteWhy two phases?\n\n\n\nPhase 1 finds the theoretical maximum dispatch rate \\(\\mu_c^*\\). Phase 2 then asks: given that the network dispatches at least at \\(\\alpha \\cdot \\mu_c^*\\), what is the most equitable distribution of dispatch rates across nodes? The two-phase structure avoids solving a bilevel problem directly.\n\n\n\n\nBase problem — shared by both phases\nDecision variables\n\n\n\n\n\n\n\nVariable\nDescription\n\n\n\n\n\\(v^i_x\\)\nFlow of each line in each node (all nodes combined)\n\n\n\\(\\mu_i\\)   (objective_[nd])\nIndividual dispatch rate — stored as a constraint, read as primal value\n\n\n\\(\\mu_c\\)   (network_objective)\nNetwork dispatch rate, linked by equality to \\(\\sum_i \\tilde{b}_i \\cdot \\mu_i\\)\n\n\n\nConstraints\n\n\n\n\n\n\n\nConstraint\nFormulation\n\n\n\n\nBalance\n\\(S \\cdot v = 0\\) for every bus in every node\n\n\nNon-negative dispatch\n\\(\\mu_i \\geq 0\\) for every node \\(i\\)\n\n\nTransfer flow bounds\nimport bound \\(/ B\\), export bound unchanged (supply-controlled)\n\n\nCapacity coupling\nStoichiometric coefficient on shared bus \\(= \\tilde{b}_i\\)\n\n\nNetwork objective\n\\(\\mu_c = \\sum_i \\tilde{b}_i \\cdot \\mu_i\\) (equality constraint)\n\n\n\n\n\n\n\n\n\nWarningS·v = 0 is never explicit\n\n\n\nThe incidence matrix \\(S\\) is never built as a matrix object. It is encoded implicitly by GridCore: each bus becomes a constraint, and each line writes its incidence coefficients into that constraint via set_linear_coefficients().\n\n\n\n\n\nPhase 1 vs Phase 2\n\nPhase 1 — LPPhase 2 — QP\n\n\nObjective\n\\[\\max \\quad \\mu_c = \\sum_i \\tilde{b}_i \\cdot \\mu_i\\]\nAdditional constraint (optional — only if min_dispatch is specified)\n\\[\\mu_i \\geq \\mu_i^{\\min} \\quad \\forall\\, i\\]\nSolver call\n# problems.py : 78-82\nnet.objective = net.scale * net.variables.network_objective\nmin_dispatch = optimize_with_retry(net, ...) / net.scale\nOutput → \\(\\mu_c^*\\) : maximum achievable network dispatch rate (min_dispatch)\n\n\n\n\n\n\nTipThis is a standard LP\n\n\n\nPhase 1 is a plain linear program. Any solver works (GLPK, CPLEX, Gurobi). The result \\(\\mu_c^*\\) is used only as a bound in Phase 2 — it is not the final answer.\n\n\n\n\nObjective\n\\[\\min \\quad \\sum_i \\mu_i^2\\]\n\nMinimizing the sum of squares penalizes solutions where one node monopolizes dispatch. It finds the dispatch rate distribution closest to equal sharing across nodes.\n\nAdditional constraints\n\\[\\alpha \\cdot \\mu_c^* \\leq \\mu_c \\leq \\mu_c^*\\]\nwhere \\(\\alpha\\) (fraction) is the tradeoff parameter set by the user.\nObjective construction in code\n# problems.py : 53-66\ndef regularize_l2_norm(network, min_dispatch):\n    l2 = Zero\n    for nd in network.nodes:\n        node_obj = network.constraints[\"objective_\" + nd]\n        ex = sum(v for v in node_obj.variables if (v.ub - v.lb) &gt; 1e-6)\n        if not isinstance(ex, int):\n            l2 += (network.scale * (ex**2)).expand()\n    network.objective = -l2   # minimize L2 ≡ maximize -L2\nOutput → NetworkSolution : individual dispatch rate \\(\\mu_i\\) per node\n\n\n\n\n\n\nWarningRequires a QP-capable solver\n\n\n\nPhase 2 introduces a quadratic objective. GLPK cannot solve it. Gurobi, CPLEX, or the hybrid solver are required.",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html#summary",
+    "href": "core_engine/documentation/index.html#summary",
+    "title": "Documentation of the current core engine",
+    "section": "Summary",
+    "text": "Summary\n\n\n\n\n\n\n\n\n\n\nPhase\nObjective\nKey added constraint\nSolver required\nOutput\n\n\n\n\n1 — LP\nmaximize \\(\\mu_c = \\sum_i \\tilde{b}_i \\cdot \\mu_i\\)\n\\(\\mu_i \\geq \\mu_i^{\\min}\\) (optional)\nAny (LP)\n\\(\\mu_c^*\\) (scalar)\n\n\n2 — QP\nminimize \\(\\sum_i \\mu_i^2\\)\n\\(\\alpha \\cdot \\mu_c^* \\leq \\mu_c \\leq \\mu_c^*\\)\nQP-capable (Gurobi / CPLEX)\nNetworkSolution (\\(\\mu_i\\) per node)",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html#supply-file-format",
+    "href": "core_engine/documentation/index.html#supply-file-format",
+    "title": "Documentation of the current core engine",
+    "section": "Supply File Format",
+    "text": "Supply File Format\nIn the pipeline, a supply profile is passed to GridFlow as a packed artifact (zipped archive). Inside this archive, the core data is a CSV file with two essential columns:\n\n\n\n\n\n\n\nColumn\nDescription\n\n\n\n\nid\nTransfer line identifier (e.g. EX_pv__D_e for solar import)\n\n\nflux\nMaximum import flow for that source (\\(kW \\cdot h^{-1} \\cdot MVA^{-1}\\))\n\n\n\nEach row represents one source available in the grid environment. The id maps directly to a transfer line in the network model.",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html#what-is-a-flow",
+    "href": "core_engine/documentation/index.html#what-is-a-flow",
+    "title": "Documentation of the current core engine",
+    "section": "What is a Flow?",
+    "text": "What is a Flow?\nA flow (\\(v_i\\)) is the rate at which power is drawn or produced by a transfer line. In the context of a supply profile, it represents the maximum quantity of power that nodes can import per unit time and per unit of installed capacity.\nThe unit \\(kW \\cdot h^{-1} \\cdot MVA^{-1}\\) breaks down as:\n\n\\(kW\\): amount of power (kilowatts)\n\\(h^{-1}\\): per hour\n\\(MVA^{-1}\\): normalized by total installed capacity\n\nThis normalization by \\(MVA\\) is key: the flow value is independent of the site’s footprint. It expresses a rate relative to the network itself, not to the external load.\nThe conversion from raw supply to flow is:\n\\[v_i = \\frac{D_i \\times (1 - A_i) \\times 1000}{Mw_i \\times B_{total}}\\]\n\n\n\n\n\n\n\n\nSymbol\nDescription\nUnit\n\n\n\n\n\\(v_i\\)\nMaximum flow available to nodes\n\\(kW \\cdot h^{-1} \\cdot MVA^{-1}\\)\n\n\n\\(D_i\\)\nRaw supply of source \\(i\\)\n\\(kW \\cdot h^{-1}\\)\n\n\n\\(A_i\\)\nUpstream losses (before the bus)\nunitless\n\n\n\\(Mw_i\\)\nConversion factor of source \\(i\\)\n\\(kW \\cdot unit^{-1}\\)\n\n\n\\(B_{total}\\)\nTotal installed capacity\n\\(MVA\\)",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html#supply-as-a-constraint-in-the-optimization",
+    "href": "core_engine/documentation/index.html#supply-as-a-constraint-in-the-optimization",
+    "title": "Documentation of the current core engine",
+    "section": "Supply as a Constraint in the Optimization",
+    "text": "Supply as a Constraint in the Optimization\nInside cooperative_tradeoff, the supply profile is not a decision variable — it is a constraint on import flows, applied before any optimization begins (grow.py:55):\nnet.medium = medium[medium.index.isin(ex_ids)]\nThis sets an upper bound on each transfer line:\n\\[0 \\leq v_{\\text{import},i} \\leq v_i\\]\nNodes cannot draw more than what the supply allows. This is the operating ceiling imposed on the optimization problem.\nThe supply profile therefore contributes to both phases:\n\nPhase 1 (LP): limits the feasible space for maximizing network dispatch\nPhase 2 (QP): same bounds apply when redistributing flows under the tradeoff constraint",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html#supply-as-a-decision-variable-supply-optimizer",
+    "href": "core_engine/documentation/index.html#supply-as-a-decision-variable-supply-optimizer",
+    "title": "Documentation of the current core engine",
+    "section": "Supply as a Decision Variable (Supply Optimizer)",
+    "text": "Supply as a Decision Variable (Supply Optimizer)\nIn supply_optimizer.py, the logic is reversed: the goal is to find which supply profile to schedule in order to reach an operating objective (e.g. maximize reserve power output).\n\nDecision Variables\n\n\n\n\n\n\n\n\nVariable\nDescription\nBounds\n\n\n\n\n\\(f_i\\)\nAmount of source \\(i\\) (units)\n\\([f_i^{\\min},\\ f_i^{\\max}]\\)\n\n\n\\(a_i\\)\nAddition relative to current profile\n\\([0,\\ f_i^{\\max} - f_i^{\\text{current}}]\\)\n\n\n\\(r_i\\)\nReduction relative to current profile\n\\([0,\\ f_i^{\\text{current}} - f_i^{\\min}]\\)\n\n\n\\(\\delta_i \\in \\{0,1\\}\\)\nBinary indicator: was source \\(i\\) modified?\n—\n\n\n\n\n\nConstraints\n\n\n\n\n\n\n\n\nConstraint\nExpression\nPurpose\n\n\n\n\nSource balance\n\\(f_i = f_i^{\\text{current}} + a_i - r_i\\)\nTracks net change per source\n\n\nMax sources changed\n\\(\\sum_i \\delta_i \\leq N\\)\nLimits schedule complexity\n\n\nChange indicator\n\\(a_i + r_i \\leq 1000 \\cdot \\delta_i\\)\nLinks binary to actual change\n\n\nLoad envelope\n\\(\\text{load}_{\\min} \\leq \\sum_i f_i \\cdot \\text{kW}_i \\leq \\text{load}_{\\max}\\)\nOperating feasibility\n\n\nFBA — balance (optional)\n\\(\\sum_r S_{m,r} \\cdot v_r = 0\\) for each bus \\(m\\)\nIncidence feasibility of grid operation\n\n\nFBA — supply coupling (optional)\n\\(v_{EX_i} \\geq -\\dfrac{\\text{supply\\_flux}_i}{\\text{FLUX\\_CONVERSION\\_FACTOR}}\\)\nNode draw cannot exceed what the supply provides\n\n\n\n\n\n\n\n\n\nNoteFBA constraints change the nature of the problem\n\n\n\nWithout --model: the objective operates on supply flows directly — the optimizer reasons about source quantities and their power content.\nWith --model: the balance constraints are injected via _embed_network_model(), coupling the supply to actual grid operation. The optimizer now reasons about true network flows (e.g. reserve output as a result of node dispatch), not just supply composition.\n\n\n\n\nObjective Function\n\\[\\min \\sum_i \\text{penalty} \\cdot (a_i + r_i) - \\sum_j w_j \\cdot v_j^{\\text{objective}}\\]\nMinimize supply perturbation while maximizing the target operating flow (e.g. reserve export EX_res(e)).",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html#pipeline-sources-flows-constraints",
+    "href": "core_engine/documentation/index.html#pipeline-sources-flows-constraints",
+    "title": "Documentation of the current core engine",
+    "section": "Pipeline: Sources → Flows → Constraints",
+    "text": "Pipeline: Sources → Flows → Constraints\nSite supply (units/day)\n      │\n      │  v_i = D_i × (1 - A_i) × 1000 / (Mw_i × B_total)\n      ▼\nSource flows (kW/h/MVA)\n      │\n      │  net.medium = medium[...]\n      ▼\nUpper bounds on import lines in cooperative_tradeoff\n\n\n\n\n\n\n\nImportant⚠ TO DO — Supply Toolbox\n\n\n\nThis section is missing a presentation of the supply toolbox and how it works:\n\nWhat is the supply toolbox and what problem does it solve?\nHow does it convert raw source/power data into transfer flows compatible with GridFlow?\nWhat databases or source catalog tables does it rely on?\nHow does it handle loss rates \\(A_i\\) and conversion factors \\(Mw_i\\)?\nHow does it interface with the supply optimizer and the cooperative tradeoff pipeline?\n\nThis must be documented before this chapter can be considered complete.",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html#a.1-optimization-engine",
+    "href": "core_engine/documentation/index.html#a.1-optimization-engine",
+    "title": "Documentation of the current core engine",
+    "section": "A.1 Optimization Engine",
+    "text": "A.1 Optimization Engine\nEach section maps an optimization concept to the exact lines of GridFlow source code that implement it.\nBase constraints (S·v = 0, objective_[nd] &gt;= 0, transfer bounds, network_objective equality) are all added in Step 1 inside network.py : Network.__init__(). Optimization-specific constraints (individual min dispatch floor, network dispatch bounds) are added in Step 2 inside problems.py : cooperative_tradeoff() and util.py : _apply_min_dispatch().\n\n\nStep 1 — Problem Construction\n\nLines → flow variables + \\(S \\cdot v = 0\\)\n# network.py : 262-265, 277\nfor r in model.lines:\n    r.id = r.global_id + suffix          # unique namespace per node: \"LNK__nd1\"\n    r.network_id = idx\nself.add_lines(model.lines)              # GridCore creates v_forward, v_reverse &gt;= 0\n                                         # and encodes S·v = 0 for every bus\n\n\nobjective_[nd] constraint\n# network.py : 278-286\no = self.solver.interface.Objective.clone(model.objective, model=self.solver)\nobj += o.expression * row.capacity       # accumulates for network_objective\nnode_obj = self.problem.Constraint(\n    o.expression, name=\"objective_\" + idx, lb=0.0   # lb=0 → dispatch_nd &gt;= 0\n)\nself.add_cons_vars([node_obj])\n\n\nnetwork_objective variable + equality constraint\n# util.py : 205-210  /  network.py : 297-298\ndef add_var_from_expression(model, name, expr, lb=None, ub=None):\n    var = model.problem.Variable(name, lb=lb, ub=ub)\n    const = model.problem.Constraint(\n        (var - expr).expand(), lb=0, ub=0, name=name + \"_equality\"\n    )                                    # network_objective = Σ capacity_nd × dispatch_nd\n    model.add_cons_vars([var, const])\n    return var\n\nnet_obj = add_var_from_expression(self, \"network_objective\", obj, lb=0)\nself.objective = self.problem.Objective(net_obj, direction=\"max\")\n\n\nTransfer flow bounds + capacity coupling\n# network.py : 323-385  (__add_transfers)\nexport = len(r.sinks) == 1\nlb = r.lower_bound / self.mass if export else -r.upper_bound / self.mass\n\ncoef = info.capacity\nr.add_buses({medium_bus: coef if export else -coef})  # capacity as incidence coef\n\n\nSolver selection and Gurobi config\n# network.py : 138-143\nsolver = [s for s in [\"cplex\", \"gurobi\", \"hybrid\", \"glpk\"]\n          if s in gridcore.util.solver.solvers][0]\n\n# util.py : 298-307\nif interface == \"gurobi\":\n    solver.configuration.lp_method = \"barrier\"\n    solver.problem.Params.BarConvTol = 1e-9\n    solver.problem.Params.CrossoverBasis = 1\n    solver.problem.Params.NumericFocus = 2\n    solver.problem.Params.Threads = 1\n\n\n\n\nStep 2 — Cooperative Tradeoff\n\nMain function\n# problems.py : 70-100\ndef cooperative_tradeoff(network, min_dispatch, fraction, flows, pfba, atol, rtol):\n    with network as net:\n        _apply_min_dispatch(network, min_dispatch)     # optional: objective_[nd].lb = min_dispatch_nd\n\n        # Phase 1 ─────────────────────────────────────────────────────────\n        net.objective = net.scale * net.variables.network_objective\n        min_dispatch = optimize_with_retry(net, ...) / net.scale\n\n        # Phase 2 ─────────────────────────────────────────────────────────\n        regularize_l2_norm(net, 0.0)\n        for fr in fraction:\n            net.variables.network_objective.lb = fr * min_dispatch   # dispatch floor\n            net.variables.network_objective.ub = min_dispatch        # dispatch ceiling\n            sol = solve(network, flows=flows, pfba=pfba, ...)\n            if not pfba and sol.status != OPTIMAL:\n                sol = crossover(net, sol, flows=flows)\n\n\nPhase 1 — LP objective + solver call\n# problems.py : 78  /  solution.py : 214-223\nnet.objective = net.scale * net.variables.network_objective   # maximize\n\ndef optimize_with_retry(net, message):\n    sol = net.optimize()           # first solver call (LP)\n    if sol is None:\n        network.solver.problem.reset()   # Gurobi reset on failure\n        sol = net.optimize()\n    return sol.objective_value\n\n\nPhase 1 — Optional individual min dispatch\n# util.py : 274-283\nfor nd in network.nodes:\n    obj = network.constraints[\"objective_\" + nd]\n    obj.lb = (1.0 - rtol) * min_dispatch[nd] - atol\n    if obj.lb &lt; atol:\n        obj.lb = 0\n\n\nPhase 2 — L2 objective construction (LP → QP)\n# problems.py : 53-66\ndef regularize_l2_norm(network, min_dispatch):\n    l2 = Zero\n    for nd in network.nodes:\n        node_obj = network.constraints[\"objective_\" + nd]\n        ex = sum(v for v in node_obj.variables if (v.ub - v.lb) &gt; 1e-6)\n        if not isinstance(ex, int):\n            l2 += (network.scale * (ex**2)).expand()   # quadratic term per node\n    network.objective = -l2                            # minimize L2 ≡ maximize -L2\n\n\nPhase 2 — Solver call + reading the solution\n# solution.py : 177-196, 103-119\ndef solve(network, ...):\n    network.solver.optimize()                          # QP solver call (Gurobi)\n    if pfba and flows:\n        add_pfba_objective(network, atol, rtol)\n        network.solver.optimize()\n    return NetworkSolution(network)\n\n# reading dispatch rates from primal values\ngcs[nd] = network.constraints[\"objective_\" + nd].primal\nif interface == \"gurobi\":\n    gcs = gcs.abs()                                    # Gurobi/optlang bug workaround\n\n\nPhase 2 — Crossover fallback (if QP returns non-optimal)\n# solution.py : 237-251\nnet.variables.network_objective.ub = net_dispatch + 1e-6\nnet.objective = net.scale * net.variables.network_objective   # back to LP\nfor nd in net.nodes:\n    net.constraints[\"objective_\" + nd].ub = max(const.lb, gcs[nd])  # fix QP dispatch rates",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/documentation/index.html#a.2-supply-math-to-code",
+    "href": "core_engine/documentation/index.html#a.2-supply-math-to-code",
+    "title": "Documentation of the current core engine",
+    "section": "A.2 Supply Math to Code",
+    "text": "A.2 Supply Math to Code\n\nPart 1 — Supply as a Constraint (cooperative_tradeoff)\n\nImport flow upper bound\n\\[0 \\leq v_{\\text{import},i} \\leq v_i\\]\nwhere \\(v_i\\) is derived from the site’s raw supply:\n\\[v_i = \\frac{D_i \\times (1 - A_i) \\times 1000}{Mw_i \\times B_{total}}\\]\n→ grow.py:55 (net.medium = medium[medium.index.isin(ex_ids)])\nActive in both steps of cooperative_tradeoff:\n\nStep 1 (LP): limits the feasible space for maximizing network dispatch\nStep 2 (QP): same bounds apply when redistributing flows under the tradeoff constraint\n\n\n\n\n\nPart 2 — Supply as a Decision Variable (supply_optimizer.py)\n\nDecision Variables\n\\(f_i\\) — Amount of source \\(i\\) (units)\n\\[f_i \\in [\\,f_i^{\\min},\\ f_i^{\\max}\\,]\\]\nmin_amt = current_amt × (1 − max_source_change_pct / 100)\nmax_amt = current_amt × (1 + max_source_change_pct / 100)\nFor new candidate sources: \\(f_i \\in [0,\\ 200u]\\)\n→ supply_optimizer.py:457 (existing sources) · supply_optimizer.py:468 (new candidate sources)\n\\(a_i\\) — Addition relative to current profile\n\\[a_i \\in [\\,0,\\ \\max(0,\\ f_i^{\\max} - f_i^{\\text{current}})\\,]\\]\nIf \\(f_i^{\\max} &lt; f_i^{\\text{current}}\\), the upper bound is clamped to 0 and \\(a_i = 0\\).\n→ supply_optimizer.py:460\n\\(r_i\\) — Reduction relative to current profile\n\\[r_i \\in [\\,0,\\ \\max(0,\\ f_i^{\\text{current}} - f_i^{\\min})\\,]\\]\nIf \\(f_i^{\\text{current}} &lt; f_i^{\\min}\\), the upper bound is clamped to 0 and \\(r_i = 0\\).\n→ supply_optimizer.py:461\n\\(\\delta_i \\in \\{0, 1\\}\\) — Was source \\(i\\) modified? Binary indicator variable.\n→ supply_optimizer.py:480\n\n\n\nConstraints\nSource balance\n\\[f_i = f_i^{\\text{current}} + a_i - r_i\\]\n→ supply_optimizer.py:475\nMax sources changed\n\\[\\sum_i \\delta_i \\leq N\\]\n→ supply_optimizer.py:488\nChange indicator (big-M)\n\\[a_i + r_i \\leq 1000 \\cdot \\delta_i\\]\n→ supply_optimizer.py:484 (existing) · supply_optimizer.py:486 (new candidates)\nLoad constraints\n\\[\\text{load}^{\\min} \\leq \\sum_i \\frac{\\text{load}_i}{100} \\cdot f_i \\leq \\text{load}^{\\max}\\]\n→ supply_optimizer.py:991–1004 · supply_optimizer.py:971 (_add_load_constraints()) · supply_optimizer.py:491\nFBA — Line flow bounds (optional, requires --model)\n\\[v_r^{\\min} \\leq v_r \\leq v_r^{\\max} \\quad \\forall r\\]\n→ supply_optimizer.py:1103\nFBA — Incidence steady-state (optional, requires --model)\n\\[\\sum_r S_{m,r} \\cdot v_r = 0 \\quad \\forall m\\]\n→ supply_optimizer.py:1107–1113 (inside _embed_network_model())\nFBA — Supply-transfer linking (optional, requires --model)\n\\[v_{EX_i} + \\frac{\\text{supply\\_flux}_i}{\\text{FLUX\\_CONVERSION\\_FACTOR}} \\geq 0\\]\nSame structure as Part 1, but \\(v_i^{\\text{supply}}\\) is a linear expression in \\(f_i\\) rather than a fixed value.\n→ supply_optimizer.py:1119–1131 · supply_optimizer.py:500\n\n\n\nObjective Function\n\\[\\min \\underbrace{\\sum_i \\text{penalty} \\cdot (a_i + r_i)}_{\\text{minimize perturbation}} + \\underbrace{\\sum_j w_j \\cdot \\text{obj\\_term}_j}_{\\text{operating objective}}\\]\nobj_term routing:\n\nWith FBA model → obj_term = FBA flow variable \\(v_{EX_j}\\)\nWithout model → obj_term = supply flow expression \\(\\sum_i \\text{coeff}_{ij} \\cdot f_i\\)\n\n→ supply_optimizer.py:507–513 (perturbation penalty) → supply_optimizer.py:515–542 (operating objective, handles RES_total) → supply_optimizer.py:544 (gmodel.setObjective(obj_expr, GRB.MINIMIZE)) → supply_optimizer.py:1037 (_add_objective_term()) → supply_optimizer.py:1051–1058 (FBA path) · supply_optimizer.py:1063–1068 (supply flow fallback)\n\n\n\nSupply Flow Expressions\n\\[\\text{flow}_{m} = \\sum_i \\frac{g_{m,i}}{100} \\cdot \\frac{1000}{Mw_m} \\cdot f_i\\]\n→ supply_optimizer.py:1006 (_build_flow_expressions()) → supply_optimizer.py:1028 (coefficient computation) → supply_optimizer.py:494 (called from _solve_with_gurobi)",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>1</span>  <span class='chapter-title'>Documentation of the current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/validation/index.html",
+    "href": "core_engine/validation/index.html",
+    "title": "Assessing the validity of current core engine",
+    "section": "",
+    "text": "Validation Using Measurement Datasets",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Assessing the validity of current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/validation/index.html#validation-using-measurement-datasets",
+    "href": "core_engine/validation/index.html#validation-using-measurement-datasets",
+    "title": "Assessing the validity of current core engine",
+    "section": "",
+    "text": "WarningProposed plan\n\n\n\nHere is the plan as I see it — let me know if it looks OK:\n\nINTRO:\n\nReminder of why it is not obvious to find datasets and carry out this validation\nWhich results exactly interest us, in the absolute? (which flows, the dispatch rates of which nodes?)\nReminder that what interests us is not necessarily an absolute error per sample, but rather R2 values at the scale of a whole fleet\n\nALREADY DONE: an experiment presented at the steering committee\n\nPresentation of the study context\nPresentation of the results obtained\nLink to the study and the results in the application?\n\nPLAN\n\nWill there be internal partner data available a priori? Will it be hard to obtain? (I imagine so)\nWhich open-source datasets are possible?",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Assessing the validity of current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/validation/index.html#sensitivity-analysis",
+    "href": "core_engine/validation/index.html#sensitivity-analysis",
+    "title": "Assessing the validity of current core engine",
+    "section": "Sensitivity Analysis",
+    "text": "Sensitivity Analysis\nHow model outputs respond to perturbations in key parameters (capacities, supply, tradeoff α).",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Assessing the validity of current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/validation/index.html#robustness-plan-for-calls-to-optimization-solver",
+    "href": "core_engine/validation/index.html#robustness-plan-for-calls-to-optimization-solver",
+    "title": "Assessing the validity of current core engine",
+    "section": "Robustness Plan for Calls to Optimization Solver",
+    "text": "Robustness Plan for Calls to Optimization Solver\nHandling solver failures, numerical instabilities, and edge cases in production.",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>2</span>  <span class='chapter-title'>Assessing the validity of current core engine</span>"
+    ]
+  },
+  {
+    "objectID": "core_engine/roadmap/index.html",
+    "href": "core_engine/roadmap/index.html",
+    "title": "Securing IP while improving current engine",
+    "section": "",
+    "text": "Using training to correct errors Other propositions?",
+    "crumbs": [
+      "Core modeling engine",
+      "<span class='chapter-number'>3</span>  <span class='chapter-title'>Securing IP while improving current engine</span>"
+    ]
+  },
+  {
+    "objectID": "bio/features/index.html",
+    "href": "bio/features/index.html",
+    "title": "R&D use cases assessment",
+    "section": "",
+    "text": "WarningProposal from the product team\n\n\n\nFrom memory, it seems there is at least:\n\nEdge substation modeling\nFrom legacy- to Voltgrid-inspired grid health score\nLongitudinal analysis\nModeling interaction with substation and transmission layer",
+    "crumbs": [
+      "Long-term R&D vision",
+      "<span class='chapter-number'>4</span>  <span class='chapter-title'>R&D use cases assessment</span>"
+    ]
+  },
+  {
+    "objectID": "bio/sponsors/index.html",
+    "href": "bio/sponsors/index.html",
+    "title": "Sponsors and KOL strategy",
+    "section": "",
+    "text": "WarningProposal from the product team\n\n\n\nTo be filled in tomorrow with the engine team. Goal: first presentation to the steering board in CTM on 15 March 2027.\nWe need to:\n\nmap the internal sponsors of Voltgrid,\nrecall the stakeholders already identified\npropose partnership actions",
+    "crumbs": [
+      "Long-term R&D vision",
+      "<span class='chapter-number'>5</span>  <span class='chapter-title'>Sponsors and KOL strategy</span>"
+    ]
+  },
+  {
+    "objectID": "change/usage_rampup.html",
+    "href": "change/usage_rampup.html",
+    "title": "Usage ramp-up",
+    "section": "",
+    "text": "Plan for progressively rolling out the engine to operators and scaling the number of concurrent network simulations.",
+    "crumbs": [
+      "Change and integration",
+      "<span class='chapter-number'>6</span>  <span class='chapter-title'>Usage ramp-up</span>"
+    ]
+  },
+  {
+    "objectID": "change/datasets.html",
+    "href": "change/datasets.html",
+    "title": "Datasets",
+    "section": "",
+    "text": "Inventory of the measurement datasets used to calibrate and validate the network model, with their sources and access constraints.",
+    "crumbs": [
+      "Change and integration",
+      "<span class='chapter-number'>7</span>  <span class='chapter-title'>Datasets</span>"
+    ]
+  }
+]

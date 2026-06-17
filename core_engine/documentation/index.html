@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.26">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Documentation of the current core engine – Voltgrid Engine Assessment</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../core_engine/validation/index.html" rel="next">
+<link href="../../index.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-597958c53c93a607afca12fd375c57ed.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-e3d2e515f71c3f35c3a61dec473a3f94.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+<script src="../../site_libs/quarto-diagram/mermaid.min.js"></script>
+<script src="../../site_libs/quarto-diagram/mermaid-init.js"></script>
+<link href="../../site_libs/quarto-diagram/mermaid.css" rel="stylesheet">
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../custom.css">
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../core_engine/documentation/index.html">Core modeling engine</a></li><li class="breadcrumb-item"><a href="../../core_engine/documentation/index.html"><span class="chapter-title">Documentation of the current core engine</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">Voltgrid Engine Assessment</a> 
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Introduction</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Core modeling engine</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../core_engine/documentation/index.html" class="sidebar-item-text sidebar-link active"><span class="chapter-title">Documentation of the current core engine</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../core_engine/validation/index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Assessing the validity of current core engine</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../core_engine/roadmap/index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Securing IP while improving current engine</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Long-term R&amp;D vision</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../bio/features/index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">R&amp;D use cases assessment</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../bio/sponsors/index.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Sponsors and KOL strategy</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Change and integration</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../change/usage_rampup.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Usage ramp-up</span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../change/datasets.html" class="sidebar-item-text sidebar-link"><span class="chapter-title">Datasets</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+    <nav id="TOC" role="doc-toc" class="toc-active" data-toc-expanded="1">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#processing" id="toc-processing" class="nav-link active" data-scroll-target="#processing">Processing</a></li>
+  <li><a href="#b-optimization-engine" id="toc-b-optimization-engine" class="nav-link" data-scroll-target="#b-optimization-engine">1.b Optimization Engine</a>
+  <ul class="collapse">
+  <li><a href="#overview" id="toc-overview" class="nav-link" data-scroll-target="#overview">Overview</a></li>
+  <li><a href="#general-schema" id="toc-general-schema" class="nav-link" data-scroll-target="#general-schema">General Schema</a></li>
+  <li><a href="#notation" id="toc-notation" class="nav-link" data-scroll-target="#notation">Notation</a></li>
+  <li><a href="#step-2-cooperative-tradeoff" id="toc-step-2-cooperative-tradeoff" class="nav-link" data-scroll-target="#step-2-cooperative-tradeoff">Step 2 — Cooperative Tradeoff</a>
+  <ul class="collapse">
+  <li><a href="#base-problem-shared-by-both-phases" id="toc-base-problem-shared-by-both-phases" class="nav-link" data-scroll-target="#base-problem-shared-by-both-phases">Base problem — shared by both phases</a></li>
+  <li><a href="#phase-1-vs-phase-2" id="toc-phase-1-vs-phase-2" class="nav-link" data-scroll-target="#phase-1-vs-phase-2">Phase 1 vs Phase 2</a></li>
+  </ul></li>
+  <li><a href="#summary" id="toc-summary" class="nav-link" data-scroll-target="#summary">Summary</a></li>
+  </ul></li>
+  <li><a href="#c-supply-profiles-and-add-ons" id="toc-c-supply-profiles-and-add-ons" class="nav-link" data-scroll-target="#c-supply-profiles-and-add-ons">1.c Supply Profiles and Add-ons</a>
+  <ul class="collapse">
+  <li><a href="#supply-file-format" id="toc-supply-file-format" class="nav-link" data-scroll-target="#supply-file-format">Supply File Format</a></li>
+  <li><a href="#what-is-a-flow" id="toc-what-is-a-flow" class="nav-link" data-scroll-target="#what-is-a-flow">What is a Flow?</a></li>
+  <li><a href="#supply-as-a-constraint-in-the-optimization" id="toc-supply-as-a-constraint-in-the-optimization" class="nav-link" data-scroll-target="#supply-as-a-constraint-in-the-optimization">Supply as a Constraint in the Optimization</a></li>
+  <li><a href="#supply-as-a-decision-variable-supply-optimizer" id="toc-supply-as-a-decision-variable-supply-optimizer" class="nav-link" data-scroll-target="#supply-as-a-decision-variable-supply-optimizer">Supply as a Decision Variable (Supply Optimizer)</a>
+  <ul class="collapse">
+  <li><a href="#decision-variables" id="toc-decision-variables" class="nav-link" data-scroll-target="#decision-variables">Decision Variables</a></li>
+  <li><a href="#constraints" id="toc-constraints" class="nav-link" data-scroll-target="#constraints">Constraints</a></li>
+  <li><a href="#objective-function" id="toc-objective-function" class="nav-link" data-scroll-target="#objective-function">Objective Function</a></li>
+  </ul></li>
+  <li><a href="#pipeline-sources-flows-constraints" id="toc-pipeline-sources-flows-constraints" class="nav-link" data-scroll-target="#pipeline-sources-flows-constraints">Pipeline: Sources → Flows → Constraints</a></li>
+  </ul></li>
+  <li><a href="#d-minimal-supply" id="toc-d-minimal-supply" class="nav-link" data-scroll-target="#d-minimal-supply">1.d Minimal Supply</a></li>
+  <li><a href="#e-supply-optimization" id="toc-e-supply-optimization" class="nav-link" data-scroll-target="#e-supply-optimization">1.e Supply Optimization</a></li>
+  <li><a href="#appendix-code-reference" id="toc-appendix-code-reference" class="nav-link" data-scroll-target="#appendix-code-reference">Appendix — Code Reference</a>
+  <ul class="collapse">
+  <li><a href="#a.1-optimization-engine" id="toc-a.1-optimization-engine" class="nav-link" data-scroll-target="#a.1-optimization-engine">A.1 Optimization Engine</a>
+  <ul class="collapse">
+  <li><a href="#step-1-problem-construction" id="toc-step-1-problem-construction" class="nav-link" data-scroll-target="#step-1-problem-construction">Step 1 — Problem Construction</a></li>
+  <li><a href="#step-2-cooperative-tradeoff-1" id="toc-step-2-cooperative-tradeoff-1" class="nav-link" data-scroll-target="#step-2-cooperative-tradeoff-1">Step 2 — Cooperative Tradeoff</a></li>
+  </ul></li>
+  <li><a href="#a.2-supply-math-to-code" id="toc-a.2-supply-math-to-code" class="nav-link" data-scroll-target="#a.2-supply-math-to-code">A.2 Supply Math to Code</a>
+  <ul class="collapse">
+  <li><a href="#part-1-supply-as-a-constraint-cooperative_tradeoff" id="toc-part-1-supply-as-a-constraint-cooperative_tradeoff" class="nav-link" data-scroll-target="#part-1-supply-as-a-constraint-cooperative_tradeoff">Part 1 — Supply as a Constraint (<code>cooperative_tradeoff</code>)</a></li>
+  <li><a href="#part-2-supply-as-a-decision-variable-supply_optimizer.py" id="toc-part-2-supply-as-a-decision-variable-supply_optimizer.py" class="nav-link" data-scroll-target="#part-2-supply-as-a-decision-variable-supply_optimizer.py">Part 2 — Supply as a Decision Variable (<code>supply_optimizer.py</code>)</a></li>
+  </ul></li>
+  </ul></li>
+  </ul>
+</nav>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../core_engine/documentation/index.html">Core modeling engine</a></li><li class="breadcrumb-item"><a href="../../core_engine/documentation/index.html"><span class="chapter-title">Documentation of the current core engine</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-title">Documentation of the current core engine</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="processing" class="level2">
+<h2 class="anchored" data-anchor-id="processing">Processing</h2>
+<p>Pipeline steps that occur before the optimization solver is called.</p>
+<div class="callout callout-style-default callout-warning callout-titled" title="Question for the engine team">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Question for the engine team
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Which processing steps make sense to describe here? To what extent might they affect the definition of our optimization problems?</p>
+</div>
+</div>
+</section>
+<section id="b-optimization-engine" class="level1">
+<h1>1.b Optimization Engine</h1>
+<blockquote class="blockquote">
+<p>Notation follows the <a href="https://example.com/gridflow/logic.html">GridFlow engine reference</a>. Code variable names are given in parentheses.</p>
+</blockquote>
+<hr>
+<section id="overview" class="level2">
+<h2 class="anchored" data-anchor-id="overview">Overview</h2>
+<p>Voltgrid splits the optimization into two successive steps.</p>
+<p><strong>Step 1 — Problem Setup</strong> assembles the LP structure: nodes are loaded, balance constraints (<span class="math inline">\(S \cdot v = 0\)</span>) are encoded, and individual and network dispatch objectives are defined. No solver is called at this stage.</p>
+<p><strong>Step 2 — Cooperative Tradeoff</strong> then solves the problem in two phases. The need for two phases comes from a well-known failure mode of classic dispatch applied to networks: a single highly efficient node can monopolize all available supply and drive every other member to zero output. To prevent this, GridFlow introduces a tradeoff parameter <span class="math inline">\(\alpha \in [0,1]\)</span> that relaxes the network dispatch constraint, giving lower-output nodes room to remain active.</p>
+<p>Concretely:</p>
+<ol type="1">
+<li><strong>Phase 1 (LP)</strong> — run a standard dispatch to obtain the maximum achievable network dispatch rate <span class="math inline">\(\mu_c^*\)</span>.</li>
+<li><strong>Phase 2 (QP)</strong> — fix <span class="math inline">\(\mu_c \geq \alpha \cdot \mu_c^*\)</span> and minimize <span class="math inline">\(\sum_i \mu_i^2\)</span>, which distributes dispatch as evenly as possible across all nodes.</li>
+</ol>
+<p>This approach is much faster than multi-objective alternatives and yields an optimum conceptually similar to fair-share dispatch: each node operates at its maximum rate without diminishing the output of others — hence <em>cooperative</em>. In the absence of additional constraints, the resulting dispatch rates are correlated with node capacity within a network, not as a prior assumption but as a direct consequence of the optimization.</p>
+<hr>
+</section>
+<section id="general-schema" class="level2">
+<h2 class="anchored" data-anchor-id="general-schema">General Schema</h2>
+<div class="cell" data-layout-align="default">
+<div class="cell-output-display">
+<div>
+<p></p><figure class="figure"><p></p>
+<div>
+<pre class="mermaid mermaid-js">%%{init: {"flowchart": {"useMaxWidth": true, "nodeSpacing": 50, "rankSpacing": 55}}}%%
+flowchart TD
+    subgraph STEP1["STEP 1 — Problem Setup"]
+        S1A["Load and assemble nodes&lt;br/&gt;&lt;code&gt;Network.__init__()&lt;/code&gt;"]
+        S1B["Build balance constraints S·v = 0&lt;br/&gt;&lt;code&gt;add_lines()&lt;/code&gt;"]
+        S1C["Create individual objectives μᵢ and network objective μc&lt;br/&gt;&lt;code&gt;objective_[nd]&lt;/code&gt;  ·  &lt;code&gt;network_objective&lt;/code&gt;"]
+        S1A --&gt; S1B --&gt; S1C
+    end
+
+    subgraph STEP2["STEP 2 — Cooperative Tradeoff"]
+        S2P1["&lt;b&gt;Phase 1 — LP&lt;/b&gt;&lt;br/&gt;maximize  μc = Σ b̃ᵢ · μᵢ"]
+        S2P1 --&gt; MG["μc* —  maximum achievable network dispatch rate"]
+        MG --&gt; S2P2["&lt;b&gt;Phase 2 — QP&lt;/b&gt;&lt;br/&gt;minimize  Σᵢ μᵢ²   subject to   α · μc* ≤ μc ≤ μc*"]
+        S2P2 --&gt; OUT["NetworkSolution  —  individual dispatch rate μᵢ per node"]
+    end
+
+    STEP1 --&gt; STEP2
+
+    style S1A fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f
+    style S1B fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f
+    style S1C fill:#dbeafe,stroke:#3b82f6,color:#1e3a5f
+    style STEP1 fill:#eff6ff,stroke:#3b82f6,color:#1e40af
+    style STEP2 fill:#f0fdf4,stroke:#22c55e,color:#14532d
+    style S2P1 fill:#dcfce7,stroke:#16a34a,color:#14532d
+    style S2P2 fill:#dcfce7,stroke:#16a34a,color:#14532d
+    style MG fill:#fef9c3,stroke:#ca8a04,color:#713f12
+    style OUT fill:#f0fdf4,stroke:#16a34a,color:#14532d
+</pre>
+</div>
+<p></p></figure><p></p>
+</div>
+</div>
+</div>
+<hr>
+</section>
+<section id="notation" class="level2">
+<h2 class="anchored" data-anchor-id="notation">Notation</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 28%">
+<col style="width: 46%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+<th>Code variable</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(v^i_x\)</span></td>
+<td>Flow of line <span class="math inline">\(x\)</span> in node <span class="math inline">\(i\)</span></td>
+<td><code>v_forward</code>, <code>v_reverse</code> per line</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mu_i\)</span></td>
+<td>Dispatch rate of node <span class="math inline">\(i\)</span></td>
+<td><code>objective_[nd]</code> (constraint primal value)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mu_c\)</span></td>
+<td>Network dispatch rate <span class="math inline">\(= \sum_i \tilde{b}_i \cdot \mu_i\)</span></td>
+<td><code>network_objective</code></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mu_c^*\)</span></td>
+<td>Maximum achievable network dispatch rate</td>
+<td><code>min_dispatch</code> (output of Phase 1)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\tilde{b}_i\)</span></td>
+<td>Relative capacity of node <span class="math inline">\(i\)</span> : <span class="math inline">\(b_i / \sum_j b_j\)</span></td>
+<td><code>row.capacity</code></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\alpha\)</span></td>
+<td>Tradeoff parameter <span class="math inline">\(\in [0, 1]\)</span></td>
+<td><code>fraction</code></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(S\)</span></td>
+<td>Incidence matrix</td>
+<td>encoded by GridCore via <code>add_lines()</code></td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="step-2-cooperative-tradeoff" class="level2">
+<h2 class="anchored" data-anchor-id="step-2-cooperative-tradeoff">Step 2 — Cooperative Tradeoff</h2>
+<p>The LP assembled in Step 1 is solved in two successive phases. Phase 2 <strong>replaces the objective in place</strong> (LP → QP) before calling the solver again — the constraint structure is not rebuilt.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>Why two phases?
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Phase 1 finds the theoretical maximum dispatch rate <span class="math inline">\(\mu_c^*\)</span>. Phase 2 then asks: <em>given that the network dispatches at least at <span class="math inline">\(\alpha \cdot \mu_c^*\)</span>, what is the most equitable distribution of dispatch rates across nodes?</em> The two-phase structure avoids solving a bilevel problem directly.</p>
+</div>
+</div>
+<hr>
+<section id="base-problem-shared-by-both-phases" class="level3">
+<h3 class="anchored" data-anchor-id="base-problem-shared-by-both-phases">Base problem — shared by both phases</h3>
+<p><strong>Decision variables</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 43%">
+<col style="width: 56%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Variable</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(v^i_x\)</span></td>
+<td>Flow of each line in each node (all nodes combined)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mu_i\)</span> &nbsp; (<code>objective_[nd]</code>)</td>
+<td>Individual dispatch rate — stored as a constraint, read as primal value</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mu_c\)</span> &nbsp; (<code>network_objective</code>)</td>
+<td>Network dispatch rate, linked by equality to <span class="math inline">\(\sum_i \tilde{b}_i \cdot \mu_i\)</span></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Constraints</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 48%">
+<col style="width: 52%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Constraint</th>
+<th>Formulation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Balance</td>
+<td><span class="math inline">\(S \cdot v = 0\)</span> for every bus in every node</td>
+</tr>
+<tr class="even">
+<td>Non-negative dispatch</td>
+<td><span class="math inline">\(\mu_i \geq 0\)</span> for every node <span class="math inline">\(i\)</span></td>
+</tr>
+<tr class="odd">
+<td>Transfer flow bounds</td>
+<td>import bound <span class="math inline">\(/ B\)</span>, export bound unchanged (supply-controlled)</td>
+</tr>
+<tr class="even">
+<td>Capacity coupling</td>
+<td>Stoichiometric coefficient on shared bus <span class="math inline">\(= \tilde{b}_i\)</span></td>
+</tr>
+<tr class="odd">
+<td>Network objective</td>
+<td><span class="math inline">\(\mu_c = \sum_i \tilde{b}_i \cdot \mu_i\)</span> (equality constraint)</td>
+</tr>
+</tbody>
+</table>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>S·v = 0 is never explicit
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The incidence matrix <span class="math inline">\(S\)</span> is never built as a matrix object. It is encoded implicitly by GridCore: each bus becomes a constraint, and each line writes its incidence coefficients into that constraint via <code>set_linear_coefficients()</code>.</p>
+</div>
+</div>
+<hr>
+</section>
+<section id="phase-1-vs-phase-2" class="level3">
+<h3 class="anchored" data-anchor-id="phase-1-vs-phase-2">Phase 1 vs Phase 2</h3>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">Phase 1 — LP</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Phase 2 — QP</a></li></ul>
+<div class="tab-content">
+<div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
+<p><strong>Objective</strong></p>
+<p><span class="math display">\[\max \quad \mu_c = \sum_i \tilde{b}_i \cdot \mu_i\]</span></p>
+<p><strong>Additional constraint</strong> <em>(optional — only if <code>min_dispatch</code> is specified)</em></p>
+<p><span class="math display">\[\mu_i \geq \mu_i^{\min} \quad \forall\, i\]</span></p>
+<p><strong>Solver call</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># problems.py : 78-82</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>net.objective <span class="op">=</span> net.scale <span class="op">*</span> net.variables.network_objective</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>min_dispatch <span class="op">=</span> optimize_with_retry(net, ...) <span class="op">/</span> net.scale</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Output</strong> → <span class="math inline">\(\mu_c^*\)</span> : maximum achievable network dispatch rate (<code>min_dispatch</code>)</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Tip</span>This is a standard LP
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Phase 1 is a plain linear program. Any solver works (GLPK, CPLEX, Gurobi). The result <span class="math inline">\(\mu_c^*\)</span> is used only as a bound in Phase 2 — it is not the final answer.</p>
+</div>
+</div>
+</div>
+<div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
+<p><strong>Objective</strong></p>
+<p><span class="math display">\[\min \quad \sum_i \mu_i^2\]</span></p>
+<blockquote class="blockquote">
+<p>Minimizing the sum of squares penalizes solutions where one node monopolizes dispatch. It finds the dispatch rate distribution closest to equal sharing across nodes.</p>
+</blockquote>
+<p><strong>Additional constraints</strong></p>
+<p><span class="math display">\[\alpha \cdot \mu_c^* \leq \mu_c \leq \mu_c^*\]</span></p>
+<p>where <span class="math inline">\(\alpha\)</span> (<code>fraction</code>) is the tradeoff parameter set by the user.</p>
+<p><strong>Objective construction in code</strong></p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># problems.py : 53-66</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> regularize_l2_norm(network, min_dispatch):</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>    l2 <span class="op">=</span> Zero</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> nd <span class="kw">in</span> network.nodes:</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>        node_obj <span class="op">=</span> network.constraints[<span class="st">"objective_"</span> <span class="op">+</span> nd]</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>        ex <span class="op">=</span> <span class="bu">sum</span>(v <span class="cf">for</span> v <span class="kw">in</span> node_obj.variables <span class="cf">if</span> (v.ub <span class="op">-</span> v.lb) <span class="op">&gt;</span> <span class="fl">1e-6</span>)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(ex, <span class="bu">int</span>):</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>            l2 <span class="op">+=</span> (network.scale <span class="op">*</span> (ex<span class="op">**</span><span class="dv">2</span>)).expand()</span>
+<span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a>    network.objective <span class="op">=</span> <span class="op">-</span>l2   <span class="co"># minimize L2 ≡ maximize -L2</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><strong>Output</strong> → <code>NetworkSolution</code> : individual dispatch rate <span class="math inline">\(\mu_i\)</span> per node</p>
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Requires a QP-capable solver
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Phase 2 introduces a quadratic objective. GLPK cannot solve it. Gurobi, CPLEX, or the hybrid solver are required.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<hr>
+</section>
+</section>
+<section id="summary" class="level2">
+<h2 class="anchored" data-anchor-id="summary">Summary</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 10%">
+<col style="width: 16%">
+<col style="width: 33%">
+<col style="width: 26%">
+<col style="width: 12%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Phase</th>
+<th>Objective</th>
+<th>Key added constraint</th>
+<th>Solver required</th>
+<th>Output</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1 — LP</td>
+<td>maximize <span class="math inline">\(\mu_c = \sum_i \tilde{b}_i \cdot \mu_i\)</span></td>
+<td><span class="math inline">\(\mu_i \geq \mu_i^{\min}\)</span> (optional)</td>
+<td>Any (LP)</td>
+<td><span class="math inline">\(\mu_c^*\)</span> (scalar)</td>
+</tr>
+<tr class="even">
+<td>2 — QP</td>
+<td>minimize <span class="math inline">\(\sum_i \mu_i^2\)</span></td>
+<td><span class="math inline">\(\alpha \cdot \mu_c^* \leq \mu_c \leq \mu_c^*\)</span></td>
+<td>QP-capable (Gurobi / CPLEX)</td>
+<td><code>NetworkSolution</code> (<span class="math inline">\(\mu_i\)</span> per node)</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="c-supply-profiles-and-add-ons" class="level1">
+<h1>1.c Supply Profiles and Add-ons</h1>
+<blockquote class="blockquote">
+<p>How supply inputs and reserve injections are incorporated as constraints on transfer flows.</p>
+</blockquote>
+<hr>
+<section id="supply-file-format" class="level2">
+<h2 class="anchored" data-anchor-id="supply-file-format">Supply File Format</h2>
+<p>In the pipeline, a supply profile is passed to GridFlow as a <strong>packed artifact</strong> (zipped archive). Inside this archive, the core data is a <strong>CSV file</strong> with two essential columns:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 38%">
+<col style="width: 61%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Column</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>id</code></td>
+<td>Transfer line identifier (e.g.&nbsp;<code>EX_pv__D_e</code> for solar import)</td>
+</tr>
+<tr class="even">
+<td><code>flux</code></td>
+<td>Maximum import flow for that source (<span class="math inline">\(kW \cdot h^{-1} \cdot MVA^{-1}\)</span>)</td>
+</tr>
+</tbody>
+</table>
+<p>Each row represents one source available in the grid environment. The <code>id</code> maps directly to a transfer line in the network model.</p>
+</section>
+<section id="what-is-a-flow" class="level2">
+<h2 class="anchored" data-anchor-id="what-is-a-flow">What is a Flow?</h2>
+<p>A <strong>flow</strong> (<span class="math inline">\(v_i\)</span>) is the rate at which power is drawn or produced by a transfer line. In the context of a supply profile, it represents the <strong>maximum quantity of power that nodes can import per unit time and per unit of installed capacity</strong>.</p>
+<p>The unit <span class="math inline">\(kW \cdot h^{-1} \cdot MVA^{-1}\)</span> breaks down as:</p>
+<ul>
+<li><span class="math inline">\(kW\)</span>: amount of power (kilowatts)</li>
+<li><span class="math inline">\(h^{-1}\)</span>: per hour</li>
+<li><span class="math inline">\(MVA^{-1}\)</span>: normalized by total installed capacity</li>
+</ul>
+<p>This normalization by <span class="math inline">\(MVA\)</span> is key: the flow value is <strong>independent of the site’s footprint</strong>. It expresses a rate relative to the network itself, not to the external load.</p>
+<p>The conversion from raw supply to flow is:</p>
+<p><span class="math display">\[v_i = \frac{D_i \times (1 - A_i) \times 1000}{Mw_i \times B_{total}}\]</span></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 29%">
+<col style="width: 48%">
+<col style="width: 22%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Description</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(v_i\)</span></td>
+<td>Maximum flow available to nodes</td>
+<td><span class="math inline">\(kW \cdot h^{-1} \cdot MVA^{-1}\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(D_i\)</span></td>
+<td>Raw supply of source <span class="math inline">\(i\)</span></td>
+<td><span class="math inline">\(kW \cdot h^{-1}\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(A_i\)</span></td>
+<td>Upstream losses (before the bus)</td>
+<td>unitless</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(Mw_i\)</span></td>
+<td>Conversion factor of source <span class="math inline">\(i\)</span></td>
+<td><span class="math inline">\(kW \cdot unit^{-1}\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(B_{total}\)</span></td>
+<td>Total installed capacity</td>
+<td><span class="math inline">\(MVA\)</span></td>
+</tr>
+</tbody>
+</table>
+<hr>
+</section>
+<section id="supply-as-a-constraint-in-the-optimization" class="level2">
+<h2 class="anchored" data-anchor-id="supply-as-a-constraint-in-the-optimization">Supply as a Constraint in the Optimization</h2>
+<p>Inside <code>cooperative_tradeoff</code>, the supply profile is <strong>not a decision variable</strong> — it is a <strong>constraint</strong> on import flows, applied before any optimization begins (<code>grow.py:55</code>):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>net.medium <span class="op">=</span> medium[medium.index.isin(ex_ids)]</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>This sets an upper bound on each transfer line:</p>
+<p><span class="math display">\[0 \leq v_{\text{import},i} \leq v_i\]</span></p>
+<p>Nodes cannot draw more than what the supply allows. This is the operating ceiling imposed on the optimization problem.</p>
+<p>The supply profile therefore contributes to both phases:</p>
+<ul>
+<li><strong>Phase 1 (LP)</strong>: limits the feasible space for maximizing network dispatch</li>
+<li><strong>Phase 2 (QP)</strong>: same bounds apply when redistributing flows under the tradeoff constraint</li>
+</ul>
+<hr>
+</section>
+<section id="supply-as-a-decision-variable-supply-optimizer" class="level2">
+<h2 class="anchored" data-anchor-id="supply-as-a-decision-variable-supply-optimizer">Supply as a Decision Variable (Supply Optimizer)</h2>
+<p>In <code>supply_optimizer.py</code>, the logic is reversed: the goal is to find <strong>which supply profile to schedule</strong> in order to reach an operating objective (e.g.&nbsp;maximize reserve power output).</p>
+<section id="decision-variables" class="level3">
+<h3 class="anchored" data-anchor-id="decision-variables">Decision Variables</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 32%">
+<col style="width: 41%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Variable</th>
+<th>Description</th>
+<th>Bounds</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(f_i\)</span></td>
+<td>Amount of source <span class="math inline">\(i\)</span> (units)</td>
+<td><span class="math inline">\([f_i^{\min},\ f_i^{\max}]\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(a_i\)</span></td>
+<td>Addition relative to current profile</td>
+<td><span class="math inline">\([0,\ f_i^{\max} - f_i^{\text{current}}]\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(r_i\)</span></td>
+<td>Reduction relative to current profile</td>
+<td><span class="math inline">\([0,\ f_i^{\text{current}} - f_i^{\min}]\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\delta_i \in \{0,1\}\)</span></td>
+<td>Binary indicator: was source <span class="math inline">\(i\)</span> modified?</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="constraints" class="level3">
+<h3 class="anchored" data-anchor-id="constraints">Constraints</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 36%">
+<col style="width: 36%">
+<col style="width: 27%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Constraint</th>
+<th>Expression</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Source balance</td>
+<td><span class="math inline">\(f_i = f_i^{\text{current}} + a_i - r_i\)</span></td>
+<td>Tracks net change per source</td>
+</tr>
+<tr class="even">
+<td>Max sources changed</td>
+<td><span class="math inline">\(\sum_i \delta_i \leq N\)</span></td>
+<td>Limits schedule complexity</td>
+</tr>
+<tr class="odd">
+<td>Change indicator</td>
+<td><span class="math inline">\(a_i + r_i \leq 1000 \cdot \delta_i\)</span></td>
+<td>Links binary to actual change</td>
+</tr>
+<tr class="even">
+<td>Load envelope</td>
+<td><span class="math inline">\(\text{load}_{\min} \leq \sum_i f_i \cdot \text{kW}_i \leq \text{load}_{\max}\)</span></td>
+<td>Operating feasibility</td>
+</tr>
+<tr class="odd">
+<td>FBA — balance <em>(optional)</em></td>
+<td><span class="math inline">\(\sum_r S_{m,r} \cdot v_r = 0\)</span> for each bus <span class="math inline">\(m\)</span></td>
+<td>Incidence feasibility of grid operation</td>
+</tr>
+<tr class="even">
+<td>FBA — supply coupling <em>(optional)</em></td>
+<td><span class="math inline">\(v_{EX_i} \geq -\dfrac{\text{supply\_flux}_i}{\text{FLUX\_CONVERSION\_FACTOR}}\)</span></td>
+<td>Node draw cannot exceed what the supply provides</td>
+</tr>
+</tbody>
+</table>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Note</span>FBA constraints change the nature of the problem
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Without <code>--model</code>: the objective operates on supply flows directly — the optimizer reasons about source quantities and their power content.</p>
+<p>With <code>--model</code>: the balance constraints are injected via <code>_embed_network_model()</code>, coupling the supply to actual grid operation. The optimizer now reasons about true network flows (e.g.&nbsp;reserve output as a result of node dispatch), not just supply composition.</p>
+</div>
+</div>
+</section>
+<section id="objective-function" class="level3">
+<h3 class="anchored" data-anchor-id="objective-function">Objective Function</h3>
+<p><span class="math display">\[\min \sum_i \text{penalty} \cdot (a_i + r_i) - \sum_j w_j \cdot v_j^{\text{objective}}\]</span></p>
+<p>Minimize supply perturbation while maximizing the target operating flow (e.g.&nbsp;reserve export <code>EX_res(e)</code>).</p>
+<hr>
+</section>
+</section>
+<section id="pipeline-sources-flows-constraints" class="level2">
+<h2 class="anchored" data-anchor-id="pipeline-sources-flows-constraints">Pipeline: Sources → Flows → Constraints</h2>
+<pre><code>Site supply (units/day)
+      │
+      │  v_i = D_i × (1 - A_i) × 1000 / (Mw_i × B_total)
+      ▼
+Source flows (kW/h/MVA)
+      │
+      │  net.medium = medium[...]
+      ▼
+Upper bounds on import lines in cooperative_tradeoff</code></pre>
+<hr>
+<div class="callout callout-style-default callout-important callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Important</span>⚠ TO DO — Supply Toolbox
+</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This section is missing a presentation of the <strong>supply toolbox</strong> and how it works:</p>
+<ul>
+<li>What is the supply toolbox and what problem does it solve?</li>
+<li>How does it convert raw source/power data into transfer flows compatible with GridFlow?</li>
+<li>What databases or source catalog tables does it rely on?</li>
+<li>How does it handle loss rates <span class="math inline">\(A_i\)</span> and conversion factors <span class="math inline">\(Mw_i\)</span>?</li>
+<li>How does it interface with the supply optimizer and the cooperative tradeoff pipeline?</li>
+</ul>
+<p><strong>This must be documented before this chapter can be considered complete.</strong></p>
+</div>
+</div>
+<hr>
+</section>
+</section>
+<section id="d-minimal-supply" class="level1">
+<h1>1.d Minimal Supply</h1>
+<blockquote class="blockquote">
+<p>Computing the minimum source set required to sustain network dispatch.</p>
+</blockquote>
+</section>
+<section id="e-supply-optimization" class="level1">
+<h1>1.e Supply Optimization</h1>
+<blockquote class="blockquote">
+<p>Identifying supply profiles that maximize a target operating output for the network.</p>
+</blockquote>
+</section>
+<section id="appendix-code-reference" class="level1">
+<h1>Appendix — Code Reference</h1>
+<hr>
+<section id="a.1-optimization-engine" class="level2">
+<h2 class="anchored" data-anchor-id="a.1-optimization-engine">A.1 Optimization Engine</h2>
+<p>Each section maps an optimization concept to the exact lines of GridFlow source code that implement it.</p>
+<p><strong>Base constraints</strong> (<code>S·v = 0</code>, <code>objective_[nd] &gt;= 0</code>, transfer bounds, <code>network_objective</code> equality) are all added in Step 1 inside <code>network.py : Network.__init__()</code>. <strong>Optimization-specific constraints</strong> (individual min dispatch floor, network dispatch bounds) are added in Step 2 inside <code>problems.py : cooperative_tradeoff()</code> and <code>util.py : _apply_min_dispatch()</code>.</p>
+<hr>
+<section id="step-1-problem-construction" class="level3">
+<h3 class="anchored" data-anchor-id="step-1-problem-construction">Step 1 — Problem Construction</h3>
+<section id="lines-flow-variables-s-cdot-v-0" class="level4">
+<h4 class="anchored" data-anchor-id="lines-flow-variables-s-cdot-v-0">Lines → flow variables + <span class="math inline">\(S \cdot v = 0\)</span></h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co"># network.py : 262-265, 277</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> r <span class="kw">in</span> model.lines:</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>    r.<span class="bu">id</span> <span class="op">=</span> r.global_id <span class="op">+</span> suffix          <span class="co"># unique namespace per node: "LNK__nd1"</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a>    r.network_id <span class="op">=</span> idx</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>.add_lines(model.lines)              <span class="co"># GridCore creates v_forward, v_reverse &gt;= 0</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>                                         <span class="co"># and encodes S·v = 0 for every bus</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="objective_nd-constraint" class="level4">
+<h4 class="anchored" data-anchor-id="objective_nd-constraint"><code>objective_[nd]</code> constraint</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># network.py : 278-286</span></span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>o <span class="op">=</span> <span class="va">self</span>.solver.interface.Objective.clone(model.objective, model<span class="op">=</span><span class="va">self</span>.solver)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>obj <span class="op">+=</span> o.expression <span class="op">*</span> row.capacity       <span class="co"># accumulates for network_objective</span></span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a>node_obj <span class="op">=</span> <span class="va">self</span>.problem.Constraint(</span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a>    o.expression, name<span class="op">=</span><span class="st">"objective_"</span> <span class="op">+</span> idx, lb<span class="op">=</span><span class="fl">0.0</span>   <span class="co"># lb=0 → dispatch_nd &gt;= 0</span></span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb6-7"><a href="#cb6-7" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>.add_cons_vars([node_obj])</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="network_objective-variable-equality-constraint" class="level4">
+<h4 class="anchored" data-anchor-id="network_objective-variable-equality-constraint"><code>network_objective</code> variable + equality constraint</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a><span class="co"># util.py : 205-210  /  network.py : 297-298</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> add_var_from_expression(model, name, expr, lb<span class="op">=</span><span class="va">None</span>, ub<span class="op">=</span><span class="va">None</span>):</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>    var <span class="op">=</span> model.problem.Variable(name, lb<span class="op">=</span>lb, ub<span class="op">=</span>ub)</span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>    const <span class="op">=</span> model.problem.Constraint(</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>        (var <span class="op">-</span> expr).expand(), lb<span class="op">=</span><span class="dv">0</span>, ub<span class="op">=</span><span class="dv">0</span>, name<span class="op">=</span>name <span class="op">+</span> <span class="st">"_equality"</span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a>    )                                    <span class="co"># network_objective = Σ capacity_nd × dispatch_nd</span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a>    model.add_cons_vars([var, const])</span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> var</span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a>net_obj <span class="op">=</span> add_var_from_expression(<span class="va">self</span>, <span class="st">"network_objective"</span>, obj, lb<span class="op">=</span><span class="dv">0</span>)</span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="va">self</span>.objective <span class="op">=</span> <span class="va">self</span>.problem.Objective(net_obj, direction<span class="op">=</span><span class="st">"max"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="transfer-flow-bounds-capacity-coupling" class="level4">
+<h4 class="anchored" data-anchor-id="transfer-flow-bounds-capacity-coupling">Transfer flow bounds + capacity coupling</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="co"># network.py : 323-385  (__add_transfers)</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>export <span class="op">=</span> <span class="bu">len</span>(r.sinks) <span class="op">==</span> <span class="dv">1</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>lb <span class="op">=</span> r.lower_bound <span class="op">/</span> <span class="va">self</span>.mass <span class="cf">if</span> export <span class="cf">else</span> <span class="op">-</span>r.upper_bound <span class="op">/</span> <span class="va">self</span>.mass</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>coef <span class="op">=</span> info.capacity</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>r.add_buses({medium_bus: coef <span class="cf">if</span> export <span class="cf">else</span> <span class="op">-</span>coef})  <span class="co"># capacity as incidence coef</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="solver-selection-and-gurobi-config" class="level4">
+<h4 class="anchored" data-anchor-id="solver-selection-and-gurobi-config">Solver selection and Gurobi config</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="co"># network.py : 138-143</span></span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>solver <span class="op">=</span> [s <span class="cf">for</span> s <span class="kw">in</span> [<span class="st">"cplex"</span>, <span class="st">"gurobi"</span>, <span class="st">"hybrid"</span>, <span class="st">"glpk"</span>]</span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>          <span class="cf">if</span> s <span class="kw">in</span> gridcore.util.solver.solvers][<span class="dv">0</span>]</span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="co"># util.py : 298-307</span></span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> interface <span class="op">==</span> <span class="st">"gurobi"</span>:</span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a>    solver.configuration.lp_method <span class="op">=</span> <span class="st">"barrier"</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a>    solver.problem.Params.BarConvTol <span class="op">=</span> <span class="fl">1e-9</span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a>    solver.problem.Params.CrossoverBasis <span class="op">=</span> <span class="dv">1</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a>    solver.problem.Params.NumericFocus <span class="op">=</span> <span class="dv">2</span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a>    solver.problem.Params.Threads <span class="op">=</span> <span class="dv">1</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<hr>
+</section>
+</section>
+<section id="step-2-cooperative-tradeoff-1" class="level3">
+<h3 class="anchored" data-anchor-id="step-2-cooperative-tradeoff-1">Step 2 — Cooperative Tradeoff</h3>
+<section id="main-function" class="level4">
+<h4 class="anchored" data-anchor-id="main-function">Main function</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># problems.py : 70-100</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> cooperative_tradeoff(network, min_dispatch, fraction, flows, pfba, atol, rtol):</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>    <span class="cf">with</span> network <span class="im">as</span> net:</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>        _apply_min_dispatch(network, min_dispatch)     <span class="co"># optional: objective_[nd].lb = min_dispatch_nd</span></span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Phase 1 ─────────────────────────────────────────────────────────</span></span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>        net.objective <span class="op">=</span> net.scale <span class="op">*</span> net.variables.network_objective</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>        min_dispatch <span class="op">=</span> optimize_with_retry(net, ...) <span class="op">/</span> net.scale</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>        <span class="co"># Phase 2 ─────────────────────────────────────────────────────────</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>        regularize_l2_norm(net, <span class="fl">0.0</span>)</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>        <span class="cf">for</span> fr <span class="kw">in</span> fraction:</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>            net.variables.network_objective.lb <span class="op">=</span> fr <span class="op">*</span> min_dispatch   <span class="co"># dispatch floor</span></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>            net.variables.network_objective.ub <span class="op">=</span> min_dispatch        <span class="co"># dispatch ceiling</span></span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>            sol <span class="op">=</span> solve(network, flows<span class="op">=</span>flows, pfba<span class="op">=</span>pfba, ...)</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>            <span class="cf">if</span> <span class="kw">not</span> pfba <span class="kw">and</span> sol.status <span class="op">!=</span> OPTIMAL:</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>                sol <span class="op">=</span> crossover(net, sol, flows<span class="op">=</span>flows)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="phase-1-lp-objective-solver-call" class="level4">
+<h4 class="anchored" data-anchor-id="phase-1-lp-objective-solver-call">Phase 1 — LP objective + solver call</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a><span class="co"># problems.py : 78  /  solution.py : 214-223</span></span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>net.objective <span class="op">=</span> net.scale <span class="op">*</span> net.variables.network_objective   <span class="co"># maximize</span></span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> optimize_with_retry(net, message):</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>    sol <span class="op">=</span> net.optimize()           <span class="co"># first solver call (LP)</span></span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> sol <span class="kw">is</span> <span class="va">None</span>:</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>        network.solver.problem.reset()   <span class="co"># Gurobi reset on failure</span></span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>        sol <span class="op">=</span> net.optimize()</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> sol.objective_value</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="phase-1-optional-individual-min-dispatch" class="level4">
+<h4 class="anchored" data-anchor-id="phase-1-optional-individual-min-dispatch">Phase 1 — Optional individual min dispatch</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># util.py : 274-283</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> nd <span class="kw">in</span> network.nodes:</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>    obj <span class="op">=</span> network.constraints[<span class="st">"objective_"</span> <span class="op">+</span> nd]</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>    obj.lb <span class="op">=</span> (<span class="fl">1.0</span> <span class="op">-</span> rtol) <span class="op">*</span> min_dispatch[nd] <span class="op">-</span> atol</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> obj.lb <span class="op">&lt;</span> atol:</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>        obj.lb <span class="op">=</span> <span class="dv">0</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="phase-2-l2-objective-construction-lp-qp" class="level4">
+<h4 class="anchored" data-anchor-id="phase-2-l2-objective-construction-lp-qp">Phase 2 — L2 objective construction (LP → QP)</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># problems.py : 53-66</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> regularize_l2_norm(network, min_dispatch):</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>    l2 <span class="op">=</span> Zero</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">for</span> nd <span class="kw">in</span> network.nodes:</span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>        node_obj <span class="op">=</span> network.constraints[<span class="st">"objective_"</span> <span class="op">+</span> nd]</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>        ex <span class="op">=</span> <span class="bu">sum</span>(v <span class="cf">for</span> v <span class="kw">in</span> node_obj.variables <span class="cf">if</span> (v.ub <span class="op">-</span> v.lb) <span class="op">&gt;</span> <span class="fl">1e-6</span>)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>        <span class="cf">if</span> <span class="kw">not</span> <span class="bu">isinstance</span>(ex, <span class="bu">int</span>):</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>            l2 <span class="op">+=</span> (network.scale <span class="op">*</span> (ex<span class="op">**</span><span class="dv">2</span>)).expand()   <span class="co"># quadratic term per node</span></span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>    network.objective <span class="op">=</span> <span class="op">-</span>l2                            <span class="co"># minimize L2 ≡ maximize -L2</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="phase-2-solver-call-reading-the-solution" class="level4">
+<h4 class="anchored" data-anchor-id="phase-2-solver-call-reading-the-solution">Phase 2 — Solver call + reading the solution</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="co"># solution.py : 177-196, 103-119</span></span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="kw">def</span> solve(network, ...):</span>
+<span id="cb14-3"><a href="#cb14-3" aria-hidden="true" tabindex="-1"></a>    network.solver.optimize()                          <span class="co"># QP solver call (Gurobi)</span></span>
+<span id="cb14-4"><a href="#cb14-4" aria-hidden="true" tabindex="-1"></a>    <span class="cf">if</span> pfba <span class="kw">and</span> flows:</span>
+<span id="cb14-5"><a href="#cb14-5" aria-hidden="true" tabindex="-1"></a>        add_pfba_objective(network, atol, rtol)</span>
+<span id="cb14-6"><a href="#cb14-6" aria-hidden="true" tabindex="-1"></a>        network.solver.optimize()</span>
+<span id="cb14-7"><a href="#cb14-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> NetworkSolution(network)</span>
+<span id="cb14-8"><a href="#cb14-8" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb14-9"><a href="#cb14-9" aria-hidden="true" tabindex="-1"></a><span class="co"># reading dispatch rates from primal values</span></span>
+<span id="cb14-10"><a href="#cb14-10" aria-hidden="true" tabindex="-1"></a>gcs[nd] <span class="op">=</span> network.constraints[<span class="st">"objective_"</span> <span class="op">+</span> nd].primal</span>
+<span id="cb14-11"><a href="#cb14-11" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> interface <span class="op">==</span> <span class="st">"gurobi"</span>:</span>
+<span id="cb14-12"><a href="#cb14-12" aria-hidden="true" tabindex="-1"></a>    gcs <span class="op">=</span> gcs.<span class="bu">abs</span>()                                    <span class="co"># Gurobi/optlang bug workaround</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="phase-2-crossover-fallback-if-qp-returns-non-optimal" class="level4">
+<h4 class="anchored" data-anchor-id="phase-2-crossover-fallback-if-qp-returns-non-optimal">Phase 2 — Crossover fallback (if QP returns non-optimal)</h4>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb15"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a><span class="co"># solution.py : 237-251</span></span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>net.variables.network_objective.ub <span class="op">=</span> net_dispatch <span class="op">+</span> <span class="fl">1e-6</span></span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>net.objective <span class="op">=</span> net.scale <span class="op">*</span> net.variables.network_objective   <span class="co"># back to LP</span></span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a><span class="cf">for</span> nd <span class="kw">in</span> net.nodes:</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a>    net.constraints[<span class="st">"objective_"</span> <span class="op">+</span> nd].ub <span class="op">=</span> <span class="bu">max</span>(const.lb, gcs[nd])  <span class="co"># fix QP dispatch rates</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<hr>
+</section>
+</section>
+</section>
+<section id="a.2-supply-math-to-code" class="level2">
+<h2 class="anchored" data-anchor-id="a.2-supply-math-to-code">A.2 Supply Math to Code</h2>
+<section id="part-1-supply-as-a-constraint-cooperative_tradeoff" class="level3">
+<h3 class="anchored" data-anchor-id="part-1-supply-as-a-constraint-cooperative_tradeoff">Part 1 — Supply as a Constraint (<code>cooperative_tradeoff</code>)</h3>
+<section id="import-flow-upper-bound" class="level4">
+<h4 class="anchored" data-anchor-id="import-flow-upper-bound">Import flow upper bound</h4>
+<p><span class="math display">\[0 \leq v_{\text{import},i} \leq v_i\]</span></p>
+<p>where <span class="math inline">\(v_i\)</span> is derived from the site’s raw supply:</p>
+<p><span class="math display">\[v_i = \frac{D_i \times (1 - A_i) \times 1000}{Mw_i \times B_{total}}\]</span></p>
+<p>→ <code>grow.py:55</code> (<code>net.medium = medium[medium.index.isin(ex_ids)]</code>)</p>
+<p>Active in both steps of <code>cooperative_tradeoff</code>:</p>
+<ul>
+<li>Step 1 (LP): limits the feasible space for maximizing network dispatch</li>
+<li>Step 2 (QP): same bounds apply when redistributing flows under the tradeoff constraint</li>
+</ul>
+<hr>
+</section>
+</section>
+<section id="part-2-supply-as-a-decision-variable-supply_optimizer.py" class="level3">
+<h3 class="anchored" data-anchor-id="part-2-supply-as-a-decision-variable-supply_optimizer.py">Part 2 — Supply as a Decision Variable (<code>supply_optimizer.py</code>)</h3>
+<section id="decision-variables-1" class="level4">
+<h4 class="anchored" data-anchor-id="decision-variables-1">Decision Variables</h4>
+<p><strong><span class="math inline">\(f_i\)</span> — Amount of source <span class="math inline">\(i\)</span> (units)</strong></p>
+<p><span class="math display">\[f_i \in [\,f_i^{\min},\ f_i^{\max}\,]\]</span></p>
+<pre><code>min_amt = current_amt × (1 − max_source_change_pct / 100)
+max_amt = current_amt × (1 + max_source_change_pct / 100)</code></pre>
+<p>For new candidate sources: <span class="math inline">\(f_i \in [0,\ 200u]\)</span></p>
+<p>→ <code>supply_optimizer.py:457</code> (existing sources) · <code>supply_optimizer.py:468</code> (new candidate sources)</p>
+<p><strong><span class="math inline">\(a_i\)</span> — Addition relative to current profile</strong></p>
+<p><span class="math display">\[a_i \in [\,0,\ \max(0,\ f_i^{\max} - f_i^{\text{current}})\,]\]</span></p>
+<p>If <span class="math inline">\(f_i^{\max} &lt; f_i^{\text{current}}\)</span>, the upper bound is clamped to 0 and <span class="math inline">\(a_i = 0\)</span>.</p>
+<p>→ <code>supply_optimizer.py:460</code></p>
+<p><strong><span class="math inline">\(r_i\)</span> — Reduction relative to current profile</strong></p>
+<p><span class="math display">\[r_i \in [\,0,\ \max(0,\ f_i^{\text{current}} - f_i^{\min})\,]\]</span></p>
+<p>If <span class="math inline">\(f_i^{\text{current}} &lt; f_i^{\min}\)</span>, the upper bound is clamped to 0 and <span class="math inline">\(r_i = 0\)</span>.</p>
+<p>→ <code>supply_optimizer.py:461</code></p>
+<p><strong><span class="math inline">\(\delta_i \in \{0, 1\}\)</span> — Was source <span class="math inline">\(i\)</span> modified?</strong> Binary indicator variable.</p>
+<p>→ <code>supply_optimizer.py:480</code></p>
+<hr>
+</section>
+<section id="constraints-1" class="level4">
+<h4 class="anchored" data-anchor-id="constraints-1">Constraints</h4>
+<p><strong>Source balance</strong></p>
+<p><span class="math display">\[f_i = f_i^{\text{current}} + a_i - r_i\]</span></p>
+<p>→ <code>supply_optimizer.py:475</code></p>
+<p><strong>Max sources changed</strong></p>
+<p><span class="math display">\[\sum_i \delta_i \leq N\]</span></p>
+<p>→ <code>supply_optimizer.py:488</code></p>
+<p><strong>Change indicator (big-M)</strong></p>
+<p><span class="math display">\[a_i + r_i \leq 1000 \cdot \delta_i\]</span></p>
+<p>→ <code>supply_optimizer.py:484</code> (existing) · <code>supply_optimizer.py:486</code> (new candidates)</p>
+<p><strong>Load constraints</strong></p>
+<p><span class="math display">\[\text{load}^{\min} \leq \sum_i \frac{\text{load}_i}{100} \cdot f_i \leq \text{load}^{\max}\]</span></p>
+<p>→ <code>supply_optimizer.py:991–1004</code> · <code>supply_optimizer.py:971</code> (<code>_add_load_constraints()</code>) · <code>supply_optimizer.py:491</code></p>
+<p><strong>FBA — Line flow bounds</strong> <em>(optional, requires <code>--model</code>)</em></p>
+<p><span class="math display">\[v_r^{\min} \leq v_r \leq v_r^{\max} \quad \forall r\]</span></p>
+<p>→ <code>supply_optimizer.py:1103</code></p>
+<p><strong>FBA — Incidence steady-state</strong> <em>(optional, requires <code>--model</code>)</em></p>
+<p><span class="math display">\[\sum_r S_{m,r} \cdot v_r = 0 \quad \forall m\]</span></p>
+<p>→ <code>supply_optimizer.py:1107–1113</code> (inside <code>_embed_network_model()</code>)</p>
+<p><strong>FBA — Supply-transfer linking</strong> <em>(optional, requires <code>--model</code>)</em></p>
+<p><span class="math display">\[v_{EX_i} + \frac{\text{supply\_flux}_i}{\text{FLUX\_CONVERSION\_FACTOR}} \geq 0\]</span></p>
+<p>Same structure as Part 1, but <span class="math inline">\(v_i^{\text{supply}}\)</span> is a linear expression in <span class="math inline">\(f_i\)</span> rather than a fixed value.</p>
+<p>→ <code>supply_optimizer.py:1119–1131</code> · <code>supply_optimizer.py:500</code></p>
+<hr>
+</section>
+<section id="objective-function-1" class="level4">
+<h4 class="anchored" data-anchor-id="objective-function-1">Objective Function</h4>
+<p><span class="math display">\[\min \underbrace{\sum_i \text{penalty} \cdot (a_i + r_i)}_{\text{minimize perturbation}} + \underbrace{\sum_j w_j \cdot \text{obj\_term}_j}_{\text{operating objective}}\]</span></p>
+<p><strong><code>obj_term</code> routing:</strong></p>
+<ul>
+<li>With FBA model → <code>obj_term</code> = FBA flow variable <span class="math inline">\(v_{EX_j}\)</span></li>
+<li>Without model → <code>obj_term</code> = supply flow expression <span class="math inline">\(\sum_i \text{coeff}_{ij} \cdot f_i\)</span></li>
+</ul>
+<p>→ <code>supply_optimizer.py:507–513</code> (perturbation penalty) → <code>supply_optimizer.py:515–542</code> (operating objective, handles <code>RES_total</code>) → <code>supply_optimizer.py:544</code> (<code>gmodel.setObjective(obj_expr, GRB.MINIMIZE)</code>) → <code>supply_optimizer.py:1037</code> (<code>_add_objective_term()</code>) → <code>supply_optimizer.py:1051–1058</code> (FBA path) · <code>supply_optimizer.py:1063–1068</code> (supply flow fallback)</p>
+<hr>
+</section>
+<section id="supply-flow-expressions" class="level4">
+<h4 class="anchored" data-anchor-id="supply-flow-expressions">Supply Flow Expressions</h4>
+<p><span class="math display">\[\text{flow}_{m} = \sum_i \frac{g_{m,i}}{100} \cdot \frac{1000}{Mw_m} \cdot f_i\]</span></p>
+<p>→ <code>supply_optimizer.py:1006</code> (<code>_build_flow_expressions()</code>) → <code>supply_optimizer.py:1028</code> (coefficient computation) → <code>supply_optimizer.py:494</code> (called from <code>_solve_with_gurobi</code>)</p>
+
+
+</section>
+</section>
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../index.html" class="pagination-link" aria-label="Introduction">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Introduction</span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../core_engine/validation/index.html" class="pagination-link" aria-label="Assessing the validity of current core engine">
+        <span class="nav-page-text"><span class="chapter-title">Assessing the validity of current core engine</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
