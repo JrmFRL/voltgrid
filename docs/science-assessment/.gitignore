@@ -1,3 +1,6 @@
 /.quarto/
 **/*.quarto_ipynb
 _book/
+
+# Quarto render artifacts generated next to sources (e.g. rasterized mermaid for PDF)
+**/*_files/
