@@ -1,6 +1,6 @@
 # Introduction {.unnumbered}
 
-## What Voltgrid Does
+## What Voltgrid Does for Science
 
 The goal of Voltgrid is to **simulate a distributed energy grid at steady state**: given a supply
 profile (available primary energy) and a current grid composition (generator capacities), find the
